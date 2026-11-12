@@ -8,7 +8,7 @@
 Outputs in build/: dinghy.bin (app), loader/ota.bin (update loader),
 dinghy.fwsc (package). See README.md for the toolchain and the SDK.
 
---board smk37 (or BOARD=smk37) builds for the M-Vave SMK-37 (docs/SMK37.md): -DBOARD_SMK37=1 for the app and the
+--board smk37 (or BOARD=smk37) builds for the M-Vave SMK-37 (Dinghy's docs/SMK37.md; CLAVIOLINE is FM-1 only): -DBOARD_SMK37=1 for the app and the
 loader, identity SMK-37 Pro_990 (release X.Y: SMK-37 Pro_99Y), the SMK flash layout (fm1pkg_make.py, app slot
 0x97400), the package build/dinghy-smk37.fwsc. --model elite / mke (or MODEL=) with smk37: the same build under the
 SMK-37 Elite's or the MKE-P37's model name (identity, loader and update record; -DSMK_MODEL), so M-Vave's updater

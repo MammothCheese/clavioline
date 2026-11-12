@@ -27,7 +27,7 @@
 #define BOARD_SMK37 0                           /* 1: the M-Vave SMK-37 (tools/build.py --board smk37; hal/fm1_cc.h) */
 #endif
 #if BOARD_SMK37
-/* the M-Vave SMK-37 (docs/SMK37.md): the FM-1's buttons on the SMK buttons that mean the same (the fm1-to-smk37 kit's
+/* the M-Vave SMK-37 (Dinghy's docs/SMK37.md; CLAVIOLINE builds for the FM-1 only): the FM-1's buttons on the SMK buttons that mean the same (the fm1-to-smk37 kit's
  * printed-name map: PATCH = HOME, PARA = EDIT, CHORD = ENV, NOTE REPEAT = LFO, SCALE = SEL, GLOBE = GLO, BT = SAVE),
  * the four extras; K1 is the MASTER pot (hal/smk_input.h), K2 SELECT, K3 ALGORITHM, K4 PRESETS, K5..K8 KNOB 1..4.
  * The note keys have no LEDs here (the pads have colours: padled_set): KEY_LED ids are past the button LEDs and do nothing */

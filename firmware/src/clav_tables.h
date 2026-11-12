@@ -60,6 +60,7 @@ static const uint16_t GATE_GAIN[258] = {
 #define NG_R31 204800
 #define NG_C29 18063360
 #define NG_RIN 4096
+#define NG_COUT 108380
 #define NG_RP_L5 2048
 #define NG_RPA 68267
 #define NG_RPB 68267
@@ -76,17 +77,16 @@ static const uint16_t GATE_GAIN[258] = {
 #define NG_C23 1806336
 #define NG_C27 7225344
 #define NG_LEAK 4
-#define NET_N 10
+#define NET_N 9
 #define ND_A 0
 #define ND_IN 1
 #define ND_OUT 2
-#define ND_NL5 3
-#define ND_NB 4
-#define ND_N1 5
-#define ND_N3 6
-#define ND_a 7
-#define ND_NV 8
-#define ND_b 9
+#define ND_NB 3
+#define ND_N1 4
+#define ND_N3 5
+#define ND_a 6
+#define ND_NV 7
+#define ND_b 8
 /* Coupled windings La (IN-NB), Lb (NB-N1), Lc (gnd-N3): i = GM v + h, h' = GM v + AM i (GM uS Q20, AM Q30) */
 static const int32_t NET_GM[3][3] = {{78183061, -38067050, -38067050}, {-38067050, 78183061, -38067050}, {-38067050, -38067050, 78183061}};
 static const int32_t NET_AM[3][3] = {{1041718042, 15592264, 15592264}, {15592264, 1041718042, 15592264}, {15592264, 15592264, 1041718042}};
@@ -106,7 +106,7 @@ static const int32_t NET_G_R32[65] = {
     4781, 4096,
 };
 #define NET_ISRC_MUL 2000   /* Q15 source sample -> current units (1 mA at full scale) */
-#define NET_OUT_MUL 1025   /* V_OUT units -> Q15, Q16: no tablets, lever open, 1 mA at the peak -> 14000 */
+#define NET_OUT_MUL 563   /* V_OUT units -> Q15, Q16: no tablets, lever open, 1 mA at the peak -> 14000 */
 
 /* Fine tune: 2^(c/1200) in Q16 for c = -50..+50 cents. */
 static const uint32_t TUNE_Q16[101] = {

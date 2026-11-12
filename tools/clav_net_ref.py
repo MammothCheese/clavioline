@@ -22,7 +22,10 @@ BIT = {n: i for i, n in enumerate(TAB)}
 NET_MASK = (1 << 13) - 1                         # tablets 1..9, O, A, B, V shape the network
 
 # ---- nodes ---------------------------------------------------------------------------------------------
-NODES = ["A", "IN", "OUT", "NL5", "NB", "N1", "N3", "a", "NV", "b"]   # A = V2 anode; ground = -1
+# A = V2 anode; ground = -1. N1 is the row C18 .. C21: the end of L1 and the foot of L5 (see the analysis, "the row":
+# the drawing shows a small gap between C19 and R26; read as one node, the coils carry the signal to the amplifier,
+# as in Martin's patent, Selmer's presets come out at similar levels, and tablet 6 alone (Cornet) does something)
+NODES = ["A", "IN", "OUT", "NB", "N1", "N3", "a", "NV", "b"]
 N = len(NODES)
 ND = {n: i for i, n in enumerate(NODES)}
 GND = -1
@@ -36,8 +39,11 @@ P = dict(
     C27=0.02e-6,                                                                          # PRINTED
     R_SHORT=100.0,  # a closed B or V contact, as 100 ohm (keeps the matrix well scaled; << every impedance there)
     RIN=1e6,        # ESTIMATE: the amplifier's input (V5 grid leak)
+    COUT=300e-12,   # ESTIMATE: what loads the output - the multi-pin cable to the separate amplifier case plus the
+                    # 6J5's input (Miller) capacitance. With C30 it makes a flat capacitive divider, so the
+                    # fundamental reaches the amplifier (without it, 100 pF into 1 MOhm is a 1.6 kHz high-pass)
     # Inductances: ESTIMATES chosen from the printed capacitors so the resonances land in the audio band:
-    #   L5 with C30 (100 pF) -> ~4 kHz peak, with C18 / C19 -> notches ~290 / 580 Hz;
+    #   L5 with C30 + COUT (400 pF) -> ~2 kHz peak, with C18 / C19 -> notches ~290 / 580 Hz;
     #   chain La+Lb (+2M) with C20 / C21 -> ~800 / 460 Hz; La with C27 -> ~800 Hz; Lc with C22 / C23 -> ~1.1 / 1.6 kHz
     L5=15.0, R_L5=1e3, RP_L5=2e6,           # ESTIMATE: L5, its copper, its core loss (in parallel)
     LA=2.0, LB=2.0, LC=2.0,                 # ESTIMATE: windings L4+L2 (IN-NB), L1 (NB-N1), L3 (secondary)
@@ -69,16 +75,16 @@ def elements(cfg: int, lever: int):
          ("C", ND["IN"], ND["OUT"], P["C30"] + s("7") * P["C24"] + s("8") * P["C25"] + s("9") * P["C26"]),
          ("C", ND["IN"], ND["a"], P["C17"]), ("R", ND["a"], ND["NV"], P["R29"]), ("R", ND["NV"], GND, P["R30"]),
          ("C", ND["IN"], GND, P["C28"]), ("R", ND["IN"], ND["b"], P["R31"]), ("C", ND["b"], GND, P["C29"]),
-         ("R", ND["IN"], GND, r32(lever)), ("R", ND["OUT"], GND, P["RIN"]),
-         ("R", ND["OUT"], ND["NL5"], P["RP_L5"]), ("R", ND["IN"], ND["NB"], P["RPA"]),
+         ("R", ND["IN"], GND, r32(lever)), ("R", ND["OUT"], GND, P["RIN"]), ("C", ND["OUT"], GND, P["COUT"]),
+         ("R", ND["OUT"], ND["N1"], P["RP_L5"]), ("R", ND["IN"], ND["NB"], P["RPA"]),
          ("R", ND["NB"], ND["N1"], P["RPB"]), ("R", ND["N3"], GND, P["RPC"])]
     if s("V"):
         e.append(("R", ND["NV"], GND, P["R_SHORT"]))
     csh = s("1") * P["C18"] + s("2") * P["C19"]
     if csh:
-        e.append(("C", ND["NL5"], GND, csh))
+        e.append(("C", ND["N1"], GND, csh))
     if s("O"):
-        e.append(("R", ND["OUT"], ND["NL5"], P["R28"]))
+        e.append(("R", ND["OUT"], ND["N1"], P["R28"]))
     cn1 = s("3") * P["C20"] + s("4") * P["C21"]
     if cn1:
         e.append(("C", ND["N1"], GND, cn1))
@@ -138,7 +144,7 @@ def ac(cfg: int, lever: int, f):
             Y[n, n] += P["LEAK"]
         for kind, a, b, v in els:
             stamp(Y, a, b, 1.0 / v if kind == "R" else s * v)
-        stamp(Y, ND["OUT"], ND["NL5"], 1.0 / (P["R_L5"] + s * P["L5"]))
+        stamp(Y, ND["OUT"], ND["N1"], 1.0 / (P["R_L5"] + s * P["L5"]))
         stamp_coupled(Y, WINDINGS, np.linalg.inv(R + s * Lm))
         J = np.zeros(N, complex); J[ND["A"]] = 1.0
         out[i] = np.linalg.solve(Y, J)[ND["OUT"]]

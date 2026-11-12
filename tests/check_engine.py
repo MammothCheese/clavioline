@@ -72,7 +72,7 @@ def core(path, alias_path=None):
         i = int(t * FS / 1000 / w)
         d = e[i - 20:i + 40].max() - e[i - 20:i + 40].min()
         check(f"legato at {t} ms, no re-attack", d < 8,
-              f"level range {d:.1f} dB around the change (an octave jump moves the harmonics through the network)")
+              f"level range {d:.1f} dB around the change")
     a = attack(x, 200, 600, 750)
     check("attack, normal", 5 < a[-3] < 200, f"to -40/-20/-3 dB: {a[-40]:.1f} / {a[-20]:.1f} / {a[-3]:.1f} ms")
     b = attack(x, 2800, 3200, 3350)

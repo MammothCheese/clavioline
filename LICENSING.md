@@ -1,8 +1,9 @@
 # Licensing
 
-Dinghy is free software under the GNU General Public License, version 3 only (`GPL-3.0-only`, full text in
+CLAVIOLINE is free software under the GNU General Public License, version 3 only (`GPL-3.0-only`, full text in
 `LICENSE`). You may use, study, change and share it. If you give someone a firmware built from it, give them its
-complete source under the same licence too.
+complete source under the same licence too. It is built on [Dinghy](https://github.com/zvenson/dinghy), whose
+contributors are listed below.
 
 ## Who made what
 
@@ -13,7 +14,8 @@ complete source under the same licence too.
 | The TRS MIDI IN `firmware/src/midi_uart.c` | Felucca's, as sloopDX carries it, with the ring read by content from Felucca [Salt] 0.9-salt14 by ChanceTheMaker (found by keremimo) |
 | The update loader's screen: `firmware/loader/ldr_screen.c`, `tests/ldr_screen_test.c` | Copyright (C) 2026 zvenson (from OberVave, the Firmware Hub's look); the idea, a loader that draws, its 5 x 7 letters and the order of things from [Skiff](https://github.com/illuminus5/skiff) by illuminus5, GPL-3.0 |
 | From OberVave: the storage (blobs, slots), `LCD_IDLE`, the SMK-37 wiring of `platform.c`, `store.h`, the pad event queue in `smk_input.h`, `tests/smk_flash_test.c`, `tests/run_tests.sh`, the CI workflow | Copyright (C) 2026 zvenson |
-| The app `firmware/src/dinghy.c`, the wiring `platform.c`, the host mode `tests/`, the docs | zvenson |
+| The wiring `platform.c`, the host mode `tests/host.c` (Dinghy) | zvenson |
+| The Clavioline: `firmware/src/clavioline.c`, `clav_net.h`, `clav_tables.h`, `tools/clav_net_ref.py`, `gen_clav_tables.py`, `plot_net.py`, `tests/check_engine.py`, `net_check.py`, `net_test.c`, `run_engine.sh`, `tests/scripts/`, `docs/` (except `docs/platform/`, Dinghy's) | CLAVIOLINE's authors |
 
 ## Third-party material
 
@@ -22,12 +24,8 @@ complete source under the same licence too.
 | Terminus font 8x16 (ter-u16n), rendered into `firmware/gen/felucca_font.h` | SIL OFL 1.1 | `assets/fonts/Terminus-LICENSE.txt` |
 | JieLi AC79 SDK: `uboot.boot`, `cfg_tool.bin`, `eq_cfg_hw.bin` are read from your SDK checkout at build time and placed in the package; no SDK files are in this tree | Apache-2.0 | <https://gitee.com/Jieli-Tech/fw-AC79_AIoT_SDK> |
 
-## The logo
-
-`assets/logo.svg` / `logo.png` carry the designburg signet: Copyright (C) designburg, all rights reserved, not under
-the GPL. It marks Dinghy itself; a fork uses its own logo.
-
 ## Trademarks
 
 "Felucca" and "Hügelton Instruments" are names of Hügelton Instruments; "M-VAVE", "FM-1", "SMK-37" and "MKE-P37"
-belong to their owners. Dinghy is not made or endorsed by them.
+belong to their owners. "Clavioline" was a name used by Constant Martin and Selmer. This firmware is not made or
+endorsed by any of them.

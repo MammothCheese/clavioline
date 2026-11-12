@@ -25,7 +25,7 @@ OUT = Path(__file__).resolve().parent.parent / "firmware" / "src" / "clav_tables
 R1, R3, R4, R7, R8 = 1e3, 50e3, 2.5e3, 5e3, 500e3       # PRINTED
 C1, C2, C3 = 0.1e-6, 0.1e-6, 0.25e-6                    # PRINTED
 # Normalised: 1 = the quiescent (cut-off) cathode voltage, 0 = fully conducting. The printed bias resistors
-# (R8, preset R2, unknown HT) do not give consistent absolute levels (Stage 1 analysis, U6), so only the
+# (R8, preset R2, unknown HT) do not give consistent absolute levels (docs/HISTORY.md), so only the
 # time constants are taken from the circuit: key down discharges the ladder to 0 through R1, key up
 # recharges it to 1 through R8. V2's own cathode current is ignored (first-order model).
 
@@ -127,7 +127,7 @@ def q12(x):
 G = {
     "R5": g_r(Pn["R5"]), "C5": g_c(Pn["C5"]), "C30": g_c(Pn["C30"]), "C24": g_c(Pn["C24"]), "C25": g_c(Pn["C25"]),
     "C26": g_c(Pn["C26"]), "C17": g_c(Pn["C17"]), "R29": g_r(Pn["R29"]), "R30": g_r(Pn["R30"]), "C28": g_c(Pn["C28"]),
-    "R31": g_r(Pn["R31"]), "C29": g_c(Pn["C29"]), "RIN": g_r(Pn["RIN"]), "RP_L5": g_r(Pn["RP_L5"]),
+    "R31": g_r(Pn["R31"]), "C29": g_c(Pn["C29"]), "RIN": g_r(Pn["RIN"]), "COUT": g_c(Pn["COUT"]), "RP_L5": g_r(Pn["RP_L5"]),
     "RPA": g_r(Pn["RPA"]), "RPB": g_r(Pn["RPB"]), "RPC": g_r(Pn["RPC"]), "SHORT": g_r(Pn["R_SHORT"]),
     "C18": g_c(Pn["C18"]), "C19": g_c(Pn["C19"]), "R28": g_r(Pn["R28"]), "C20": g_c(Pn["C20"]), "C21": g_c(Pn["C21"]),
     "R26": g_r(Pn["R26"]), "R27": g_r(Pn["R27"]), "C22": g_c(Pn["C22"]), "C23": g_c(Pn["C23"]), "C27": g_c(Pn["C27"]),

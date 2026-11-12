@@ -22,7 +22,7 @@
  *
  * The sound: trapezoid oscillator (+ Concert sub-octave dividers) -> V2 gate (printed cathode network) -> the
  * Fig. 4 tone network, exact (clav_net.h) -> the valve amplifier's 2nd-harmonic distortion. Values marked ESTIMATE
- * are not documented in any source we have: docs/CLAVIOLINE.md lists them all. */
+ * are not documented in any source we have: docs/ENGINE.md lists them all. */
 static void app_idle(void);
 #define LCD_IDLE app_idle
 #define APP_NAME "CLAVIOLINE"
@@ -35,7 +35,7 @@ static void app_idle(void);
 
 /* ---- the sound (audio ISR) ------------------------------------------------------------------------- */
 #define OSC_AMP 12000                           /* trapezoid peak, Q15 */
-#define EDGE_K_Q16 57803u                       /* trapezoid edge: t_e * FS / 2, Q16; t_e = 40 us. ESTIMATE */
+#define EDGE_K_Q16 144507u                      /* trapezoid edge: t_e * FS / 2, Q16; t_e = 100 us. ESTIMATE ("trapezoidal": visible slopes) */
 #define SUB_F 12000                             /* Sub I / II "f": as loud as the main tone. ESTIMATE */
 #define SUB_P 3795                              /* "p": 10 dB softer. ESTIMATE */
 #define T_ON 132u                               /* key contact 1 (oscillator) to contact 2 (gate): 3 ms. ESTIMATE */

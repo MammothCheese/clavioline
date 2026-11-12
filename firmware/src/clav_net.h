@@ -74,13 +74,13 @@ static int32_t sf_to_q(sf_t a, int32_t q)       /* a * 2^q as int32, saturated *
 /* ---- the elements ------------------------------------------------------------------------------------ */
 #define ND_GND NET_N                            /* ground: an extra node held at 0 */
 enum { E_R5, E_C5, E_CS, E_C17, E_R29, E_R30, E_C28, E_R31, E_C29, E_R32, E_RIN, E_RPL5, E_RPA, E_RPB, E_RPC,
-       E_SV, E_CSH, E_R28, E_CN1, E_GN1, E_CN3, E_C27, E_SB, NE };
+       E_SV, E_CSH, E_R28, E_CN1, E_GN1, E_CN3, E_C27, E_SB, E_COUT, NE };
 static const uint8_t NE_P[NE] = {ND_A, ND_A, ND_IN, ND_IN, ND_a, ND_NV, ND_IN, ND_IN, ND_b, ND_IN, ND_OUT, ND_OUT,
-                                 ND_IN, ND_NB, ND_N3, ND_NV, ND_NL5, ND_OUT, ND_N1, ND_N1, ND_N3, ND_NB, ND_NB};
+                                 ND_IN, ND_NB, ND_N3, ND_NV, ND_N1, ND_OUT, ND_N1, ND_N1, ND_N3, ND_NB, ND_NB, ND_OUT};
 static const uint8_t NE_Q[NE] = {ND_GND, ND_IN, ND_OUT, ND_a, ND_NV, ND_GND, ND_GND, ND_b, ND_GND, ND_GND, ND_GND,
-                                 ND_NL5, ND_NB, ND_N1, ND_GND, ND_GND, ND_GND, ND_NL5, ND_GND, ND_GND, ND_GND, ND_GND,
-                                 ND_GND};
-static const uint8_t NE_CAP[] = {E_C5, E_CS, E_C17, E_C28, E_C29, E_CSH, E_CN1, E_CN3, E_C27};
+                                 ND_N1, ND_NB, ND_N1, ND_GND, ND_GND, ND_GND, ND_N1, ND_GND, ND_GND, ND_GND, ND_GND,
+                                 ND_GND, ND_GND};
+static const uint8_t NE_CAP[] = {E_C5, E_CS, E_C17, E_C28, E_C29, E_CSH, E_CN1, E_CN3, E_C27, E_COUT};
 #define NCAP (sizeof NE_CAP / sizeof NE_CAP[0])
 static const uint8_t NW_P[3] = {ND_IN, ND_NB, ND_GND}, NW_Q[3] = {ND_NB, ND_N1, ND_N3};   /* La, Lb, Lc */
 
@@ -121,6 +121,7 @@ static void net_compute(net_coef_t *c, uint32_t tabs, uint32_t lever)
     g[E_CN3] = (int32_t)S(T_5) * NG_C22 + (int32_t)S(T_6) * NG_C23;
     g[E_C27] = S(T_A) ? NG_C27 : 0;
     g[E_SB] = S(T_B) ? NG_SHORT : 0;
+    g[E_COUT] = NG_COUT;
 #undef S
     c->tabs = tabs & NET_TABS;
 
@@ -130,7 +131,7 @@ static void net_compute(net_coef_t *c, uint32_t tabs, uint32_t lever)
 #define STAMP(p, q, y) do { G[p][p] += (y); G[q][q] += (y); G[p][q] -= (y); G[q][p] -= (y); } while (0)
     for (k = 0; k < NE; k++)
         if (g[k]) STAMP(NE_P[k], NE_Q[k], (int64_t)g[k] << 8);
-    STAMP(ND_OUT, ND_NL5, NET_G_L5);
+    STAMP(ND_OUT, ND_N1, NET_G_L5);
     for (k = 0; k < 3u; k++)
         for (j = 0; j < 3u; j++) {
             int64_t y = NET_GM[k][j];
@@ -167,7 +168,7 @@ static void net_compute(net_coef_t *c, uint32_t tabs, uint32_t lever)
                 sf_t d = sf_add(GI(i, NE_Q[e]), sf_neg(GI(i, NE_P[e])));
                 c->kc[i][k] = sf_to_q(sf_mul(d, sf_norm(g[e], -12)), 28);
             }
-            c->kl[i][0] = sf_to_q(sf_add(GI(i, ND_NL5), sf_neg(GI(i, ND_OUT))), 28);
+            c->kl[i][0] = sf_to_q(sf_add(GI(i, ND_N1), sf_neg(GI(i, ND_OUT))), 28);
             for (k = 0; k < 3u; k++)
                 c->kl[i][k + 1u] = sf_to_q(sf_add(GI(i, NW_Q[k]), sf_neg(GI(i, NW_P[k]))), 28);
             c->ku[i] = sf_to_q(GI(i, ND_A), 28);
@@ -214,7 +215,7 @@ static int32_t net_step(net_state_t *s, const net_coef_t *c, int32_t isrc)   /* 
         s->xc[k] = c->g[e] ? sat32(-(2 * ((int64_t)v[NE_P[e]] - v[NE_Q[e]]) + s->xc[k])) : 0;
     }
     {                                           /* L5: i = g v + h, h' = g v + a i */
-        int64_t gi = RSH((int64_t)NET_G_L5 * ((int64_t)v[ND_OUT] - v[ND_NL5]), 20), i = gi + s->hl[0];
+        int64_t gi = RSH((int64_t)NET_G_L5 * ((int64_t)v[ND_OUT] - v[ND_N1]), 20), i = gi + s->hl[0];
         s->hl[0] = sat32(gi + RSH(i * NET_A_L5, 30));
     }
     for (k = 0; k < 3u; k++) vw[k] = (int64_t)v[NW_P[k]] - v[NW_Q[k]];

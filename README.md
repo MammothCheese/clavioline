@@ -1,153 +1,111 @@
 # CLAVIOLINE for the M-VAVE FM-1
 
-A recreation of the 1950s Clavioline (monophonic valve keyboard, Constant Martin's design as built by Selmer) as
-custom FM-1 firmware: the oscillator, the gate and its attack, the tone-forming network and tablets, the knee lever,
-the vibrato, the Concert's sub-octaves and the valve amplifier, from *Electronic Engineering*, October 1952, the
-Selmer Concert tone-generator drawing and the other sources listed in
-[docs/CLAVIOLINE-ANALYSIS.md](docs/CLAVIOLINE-ANALYSIS.md). Status, controls and every estimate: [docs/CLAVIOLINE.md](docs/CLAVIOLINE.md).
+<img src="docs/screen.png" width="240" align="right" alt="The FM-1 screen: the tablet rail, the preset, the note, the coupler and the knee lever">
 
-Built on **Dinghy** (zvenson/dinghy, commit ea1b6bf), whose platform layer is used unchanged apart from the app's name,
-the package identity (`FM-1_95N`) and FM-1-only tests. GPL-3.0, as Dinghy. Dinghy's own README follows.
+Custom firmware that turns the FM-1 into a **Clavioline**, the valve keyboard Constant Martin invented in 1947 and
+Selmer built in England in the 1950s. It is the reedy, vibrato-laden lead voice of records like "Telstar".
 
----
+This is not a synthesizer "inspired by" the Clavioline. It rebuilds the original circuit:
+- the oscillator retuned by a resistor chain behind the keys;
+- the control valve that shapes each note's attack;
+- the tone-forming network of coils and capacitors that the tablets switch;
+- the knee lever, the three-speed vibrato, the Concert model's sub-octaves, and the deliberately distorting amplifier.
 
-<p align="center"><img src="assets/logo.svg" width="96" alt="Dinghy"></p>
+It works from the original circuit diagrams. [docs/HISTORY.md](docs/HISTORY.md) tells how they were read and
+what had to be estimated.
 
-# Dinghy
+## Installing
 
-**The smallest firmware for the M-VAVE FM-1 to build your own on.**
+1. Get `clavioline.fwsc` from this repository's **Releases** page, or from the latest run on the **Actions** tab.
+2. Install it with the [FM-1 Firmware Hub](https://thefirmwarehub.com) in Chrome or Edge, or over USB:
+   ```sh
+   python3 tools/fm1_install.py clavioline.fwsc
+   ```
+3. To go back to the official firmware or another one, use the Firmware Hub. It always reaches this firmware over USB.
+4. If anything goes wrong, hold **OCT−** while switching on. That starts the USB rescue: no sound, only the updater.
 
-Dinghy plays a sine wave on the keys, and that is all it does. Under it is everything an FM-1 firmware needs
-before it can be any fun: the update path, the USB rescue, MIDI over USB and the TRS jack (with clock), USB audio, the
-keys, knobs and LEDs, the screen, flash storage, and the same again for the M-Vave SMK-37. It all works, so you start
-with the part you actually want to write.
+Installing firmware is at your own risk; keep a backup of your FM-1.
+
+## Playing
+
+The Clavioline plays **one note at a time**. When you hold several keys, the **highest** one sounds, as on the original.
+Sliding from key to key without letting go changes the pitch without starting a new note. Every new note after
+silence starts the same way.
+
+### PLAY mode
+
+| Control | What it does | On the original |
+|---|---|---|
+| Keys | Play. MIDI notes in (USB or the TRS jack) play too | The 36-key keyboard, F to E |
+| **PRESETS** knob | **Knee lever**: the expression swell. Turn quickly for big moves, slowly for small ones. Fully left is silent. MIDI CC 11 moves it too | The lever under the keyboard, pushed with the knee |
+| MASTER | Volume | The amplifier |
+| OCT− / OCT+ | Octave coupler: LOW / MED / HIGH | The transposing slider |
+| ALGORITHM | Shift the FM-1's 27 keys up an octave to reach the top of the 36-key range | |
+| SELECT | Presets (see below) | The voicing card |
+| LFO | Vibrato speed: off → I → II → III | Tablets I, II, III |
+| FX | Vibrato depth (the AMP tablet) | The Amplitude tablet |
+| ENV | Tablet **P**: a sharper attack, for plucked sounds | Tablet P |
+| EDIT | STOPS mode | |
+| SAVE | Store the current tablets and coupler in the user slot shown | |
+| KNOB 1 | Fine tuning, ±50 cents | The tuning control |
+
+Plucked sounds work as on the original. Choose Banjo, Mandolin or Harpsichord (they have **P** down), then flick the
+knee lever up and back down for each note. Bowed swells are a slow push and release.
+
+### STOPS mode: the tablets
+
+Press **EDIT** and the keyboard becomes the row of tablets. Each key turns one on or off, and its LED shows which are
+down. **PLAY** holds the last note as a drone so you hear each change. **EDIT** or **HOME** goes back to playing; nothing
+is lost.
 
 ```
-firmware/src/dinghy.c     <- your firmware: ~300 lines, a 4-voice sine. Start here.
-firmware/src/platform.c   <- the plumbing (boot, USB, MIDI, updates, audio ISR, storage). Done; read it, don't fight it.
-firmware/src/store.h      <- where your data lives in flash, per board
-firmware/src/*.c, hal/    <- Felucca's platform, as SLOOP / sloopDX / OberVave carry it; the SMK-37 layer
+ black keys:    F#3  G#3         C#4  D#4          F#4  G#4  A#4    C#5
+                Sub  Sub         Sub  Sub          vib  vib  vib    vibrato
+                I p  II p        I f  II f          I   II   III    depth
+ white keys: F3  G3  A3  B3  C4  D4  E4  F4  G4  A4  B4  C5  D5  E5  F5
+              1   2   3   4   5   6   7   8   9   O   A   B   V   P   (all off)
 ```
 
-Dinghy is based on [Felucca](https://github.com/hugelton/Felucca) by Leo Kuroshita (Hügelton Instruments), with its
-platform as [SLOOP](https://github.com/isod89/sloop-fm1) (isod89) carries it: it keeps that platform and throws away the
-rest. The smallest boat of the family, after the felucca and the sloop.
+- **1–9, O, A, B, V** switch the coils and capacitors of the tone-forming network. They combine as in the real circuit:
+  each changes what the others do, rather than adding a fixed EQ curve.
+- **P** shortens the attack.
+- **Sub I / Sub II** add the octave and the two octaves below, softly (**p**) or loudly (**f**). They come from the Concert model.
 
-<p align="center"><img src="docs/screen.png" width="240" alt="Dinghy's screen: the name, the note played, a keyboard with the keys that sound"></p>
+### Presets
 
-> **Status: 0.5.** 0.5 runs on newer FM-1s too: their flash chip, the UC25HQ80 (0xB36014), beside the Puya (0x856014);
-> before, a firmware built on Dinghy saved to RAM only on them. Dinghy's platform runs on the FM-1 in VIBE FM Link
-> (zvenson/vibe-link), tested there on 7.11.2026. 0.3 was tested on the FM-1: the install, MIDI in (pitch exact, 4 voices), USB audio at
-> 44.1 / 48 kHz, the keys, the screen, the octave kept in flash, and back to another firmware through the hub.
-> 0.4 brings OberVave's platform over: the TRS MIDI IN, the clock, blobs and slots, the loader's screen, the SMK-37.
-> That code runs on the device in OberVave (FM-1 and SMK-37); Dinghy 0.4 itself is tested on the host only so far.
+**SELECT** steps through 40 voicings, then 4 user slots:
+- **17** from the 1952 *Electronic Engineering* table, from Violin to Musical Saw;
+- **22** from the Selmer voicing tables quoted by *Sound On Sound*, such as Alto Sax, Church Organ and Harpsichord;
+- **an organ tone** from the Concert's sub-octaves.
 
-## What you get
+A `*` after the name means you have changed something since choosing it.
 
-| | |
-| --- | --- |
-| **Updates that always work** | `tools/fm1_install.py`, the web installers and the [FM-1 Firmware Hub](https://thefirmwarehub.com) reach your firmware over USB, so you (and your users) can always install the next build, or go back to the official firmware. |
-| **USB rescue** | Hold **OCT-** while switching on: no sound, only the updater. If your firmware crashes twice at boot, the FM-1 goes there by itself. |
-| **MIDI** | USB in and out (class compliant) and the FM-1's TRS MIDI IN, in one queue: `midi_get()` says where a message came from, `midi_send()`. Clock, start, stop and continue reach your app. |
-| **USB audio** | The FM-1 shows up as a 16-bit stereo audio input (44.1 or 48 kHz): record it into any DAW or phone. Nothing to do. |
-| **Panel** | 27 keys, 14 buttons, 7 encoders, the MASTER knob, the LEDs, by name (`BTN_PLAY`, `ENC_KNOB1`, ...). |
-| **Screen** | 240 x 240, text in two sizes, rectangles, lines, pixels. |
-| **Storage** | `settings_*` (4 KB), 8 blobs of 4 KB (`blob_*`), 8 slots of 16 KB (`slot_*`), each with a CRC, in places no other part of the flash is in reach of. |
-| **Never waits for the screen** | `LCD_IDLE`: your app reads MIDI and the keys while the screen's DMA runs, so a chord never stumbles over a redraw. |
-| **The SMK-37 too** | `./build.sh --board smk37` (Pro, Elite, MKE-P37): the same app on M-Vave's 37-key keyboard, with velocity, outer keys, 16 coloured pads, faders and wheels. [docs/SMK37.md](docs/SMK37.md) |
-| **An update screen** | The update loader draws your name in your colour, a progress bar and what to do, also after an install was cut off (FM-1). |
-| **A crash screen** | A fault shows where it happened (the PC), then the FM-1 restarts. |
-| **Host mode** | The same `dinghy.c` on your computer: the screen as an image, the sound as a WAV, scripted keys, knobs, MIDI (USB and TRS, a clock), SMK-37 pads and wheels. No FM-1 needed to try an idea. |
-| **Tests and CI** | `tests/run_tests.sh`: the host app, the flash maps, the update path, the loader, the installer. A tag `vX.Y` on GitHub builds, tests and releases the packages with a build attestation. |
-| **Checks** | The build fails on what bricks or breaks an FM-1 firmware: a 64-bit division, a call into the chip ROM, too much RAM, a register touched outside `hal/`. |
+## How it matches the original
 
-## Build your own
+| The original | Here |
+|---|---|
+| Valve multivibrator, retuned by a precision resistor chain; highest key wins | A phase-accurate oscillator with highest-note priority, legato and restart-from-rest |
+| Output "trapezoidal in form" | A trapezoid with sloped edges, alias-free |
+| The control valve (6BA6) opens after a delay set by its cathode circuit; tablet P shortens it | The printed cathode circuit simulated exactly: ~19 ms normally, ~1.5 ms with P, with the valve's gradual turn-on |
+| A network of five coils and 13 capacitor and resistor groups, switched by tablets 1–9, O, A, B, V | **The whole network simulated, component by component**, every sample. The tablets interact because they share one circuit |
+| The knee lever is a variable resistor inside that network | The same: softer playing also changes the tone, as the patent describes |
+| Vibrato at 4.5 / 5.5 / 6.5 Hz, two depths | The same rates; depths in the ratio the circuit gives (3.8 : 1) |
+| Concert: Sub I / Sub II from divider valves, soft or loud | Square-wave dividers clocked by the oscillator |
+| An amplifier built to distort, mostly 2nd harmonic | A valve-style stage adding mainly 2nd harmonic |
 
-From nothing to your own firmware on the FM-1, step by step. Each step works before you go to the next.
+Some things are not in any surviving document: the coils' values, the knee lever's exact taper, the vibrato's depth in
+cents and the amount of distortion. They are estimated, and every estimate is listed in
+[docs/ENGINE.md](docs/ENGINE.md), so you can change them.
 
-### 1. Copy it
+## Documentation
 
-On GitHub: **Use this template** (top right on this page) or fork it, then clone your copy. Rename nothing yet:
-first make sure the unchanged Dinghy builds on your machine.
+- [docs/HISTORY.md](docs/HISTORY.md): the instrument, the sources, how the circuit was reconstructed, and the open questions.
+- [docs/ENGINE.md](docs/ENGINE.md): how the sound engine works, every parameter and estimate, the tests, and building from source.
+- [docs/platform/](docs/platform/): the FM-1 platform's API and the chip's rules, for developers.
 
-### 2. Set up once
+## Credits and licence
 
-You need Linux on x86-64 (or macOS / Windows with Docker or WSL), Python 3 with Pillow, the JieLi toolchain
-and three files of the JieLi AC79 SDK:
+GPL-3.0-only. The FM-1 platform is [Dinghy](https://github.com/zvenson/dinghy) by zvenson, built on Felucca by Leo Kuroshita (Hügelton Instruments)
+and its successors. See [LICENSING.md](LICENSING.md) for who made what.
 
-```sh
-pip3 install Pillow mido python-rtmidi
-tools/get_toolchain.sh                      # JieLi's clang for the chip, to ~/.jieli/toolchain
-git clone --depth 1 --branch AC79NN_SDK_V1.2.1_2023-12-13 \
-    https://gitee.com/Jieli-Tech/fw-AC79_AIoT_SDK.git ~/fw-AC79_AIoT_SDK
-```
-
-On macOS the build runs the toolchain in a `linux/amd64` Docker container by itself (have Docker running).
-`JIELI_TOOLCHAIN` and `AC79_SDK` point elsewhere if your copies live somewhere else.
-
-### 3. Hear it without an FM-1
-
-```sh
-tests/run_host.sh                           # -> build/host/dinghy.wav and screen PNGs
-```
-
-Host mode runs the same `dinghy.c` on your computer: the sound as a WAV, the screen as images. Most ideas can be
-tried here first, in seconds.
-
-### 4. Your first change
-
-Open [firmware/src/dinghy.c](firmware/src/dinghy.c) (~200 lines). The sound is `app_audio()`: it gets an empty
-buffer of stereo frames and adds to it. Make the sine a square:
-
-```c
-s = ((int32_t)ph < 0 ? 8000 : -8000) * amp >> 15;     /* instead of s = (sine(ph) * amp) >> 15; */
-```
-
-Run `tests/run_host.sh` again and listen to `build/host/dinghy.wav`. The screen is drawn in `app_main()`, the keys
-are read there too: change the text, add a knob ([docs/API.md](docs/API.md) has every call).
-
-### 5. Onto the FM-1
-
-```sh
-./build.sh                                       # -> build/dinghy.fwsc (fails on what would brick the FM-1)
-python3 tools/fm1_install.py build/dinghy.fwsc   # over USB; asks before it writes, restarts into your build
-python3 tools/fm1_install.py --info              # what runs on the connected FM-1
-```
-
-That is the whole loop: change, hear it on the host, build, install. Back to another firmware, or to the official
-one, with the [FM-1 Firmware Hub](https://thefirmwarehub.com) in Chrome or Edge: Dinghy (and every copy of it)
-answers the hub's updater like every firmware there. Installing firmware is at your own risk.
-
-### 6. When it goes wrong
-
-- **It crashes:** the screen shows where (the PC), then the FM-1 restarts. Twice at boot and it goes to the
-  USB rescue by itself.
-- **It won't start at all:** hold **OCT-** while switching on: the USB rescue, no sound, only the updater. Install
-  a working build (or another firmware from the hub) from there.
-- **The build refuses:** it checks for a 64-bit division, a call into the chip ROM, too much RAM, a register touched
-  outside `hal/`. [docs/RULES.md](docs/RULES.md) says why each one matters; read it before your first crash.
-
-### 7. Make it yours, release it, get into the hub
-
-Your name and logo, your own package identity (so the FM-1 and the installers tell your firmware from Dinghy),
-a GitHub release with the `.fwsc`, and how to get listed next to the others in the
-[FM-1 Firmware Hub](https://thefirmwarehub.com): **[docs/MAKE-IT-YOURS.md](docs/MAKE-IT-YOURS.md)**.
-
-## Where to go next
-
-- **[docs/API.md](docs/API.md)**: everything `platform.c` gives you, with the panel's ids, the screen calls, the
-  audio contract, MIDI, storage, the flash map, timing, the SMK-37.
-- **[docs/SMK37.md](docs/SMK37.md)**: building and installing for the M-Vave SMK-37.
-- **[docs/MAKE-IT-YOURS.md](docs/MAKE-IT-YOURS.md)**: turn Dinghy into your firmware: the name, the package
-  identity, releases, getting into the FM-1 Firmware Hub.
-- **[docs/RULES.md](docs/RULES.md)**: the chip's rules (no FPU, no libgcc, the audio ISR's budget) and what the build
-  checks for you. Read it before your first crash, not after.
-
-## License
-
-GPL-3.0-only, as Felucca and SLOOP: you may change and share it, and whoever gets your firmware gets its source.
-Details, credits and third-party parts in [LICENSING.md](LICENSING.md).
-
-The platform is Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments, with SLOOP's changes (isod89);
-the SMK-37 layer by M. Geisler (genkigenki); the loader's screen after Skiff (illuminus5). Dinghy (the app, the host
-mode, the docs) by zvenson.
+"Clavioline" was a name used by Constant Martin and Selmer. "M-VAVE" and "FM-1" belong to their owners. This firmware is not made or endorsed by any of them.
