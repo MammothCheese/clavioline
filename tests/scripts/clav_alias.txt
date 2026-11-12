@@ -1,4 +1,6 @@
-# a high note held: alias check (tests/check_stage2.py). Window +1, coupler HIGH: G5 key -> G7 (3136 Hz)
+# a high note held: alias check. Vibrato off, window +1, coupler HIGH: G5 key -> G7 (3136 Hz)
+50 btn 5
+80 btn 5
 100 enc 1 1
 150 btn 1
 300 keys 0x4000000

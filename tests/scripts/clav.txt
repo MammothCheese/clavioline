@@ -1,4 +1,7 @@
-# Stage 2 checks (tests/check_stage2.py reads the WAV): key k = bit k, 0 = F3, 7 = C4, 19 = C5
+# Core checks (tests/check_engine.py core): key k = bit k, 0 = F3, 7 = C4, 19 = C5
+# the power-on preset is TRUMPET (vibrato II): LFO twice -> vibrato off
+50 btn 5
+80 btn 5
 # highest-note priority and legato
 200 keys 0x80
 800 keys 0x81

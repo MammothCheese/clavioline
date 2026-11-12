@@ -46,15 +46,67 @@ static const uint16_t GATE_GAIN[258] = {
     0, 0,
 };
 
+/* Tone-forming network (tools/clav_net_ref.py): conductances in uS, Q12 (capacitors: 2C/T). */
+#define NG_R5 40960
+#define NG_C5 7225344
+#define NG_C30 36127
+#define NG_C24 72253
+#define NG_C25 1806336
+#define NG_C26 5419008
+#define NG_C17 36127
+#define NG_R29 819200
+#define NG_R30 1365
+#define NG_C28 361267
+#define NG_R31 204800
+#define NG_C29 18063360
+#define NG_RIN 4096
+#define NG_RP_L5 2048
+#define NG_RPA 68267
+#define NG_RPB 68267
+#define NG_RPC 68267
+#define NG_SHORT 40960000
+#define NG_C18 7225344
+#define NG_C19 1806336
+#define NG_R28 409600
+#define NG_C20 1806336
+#define NG_C21 5419008
+#define NG_R26 16384
+#define NG_R27 16384
+#define NG_C22 3612672
+#define NG_C23 1806336
+#define NG_C27 7225344
+#define NG_LEAK 4
+#define NET_N 10
+#define ND_A 0
+#define ND_IN 1
+#define ND_OUT 2
+#define ND_NL5 3
+#define ND_NB 4
+#define ND_N1 5
+#define ND_N3 6
+#define ND_a 7
+#define ND_NV 8
+#define ND_b 9
+/* Coupled windings La (IN-NB), Lb (NB-N1), Lc (gnd-N3): i = GM v + h, h' = GM v + AM i (GM uS Q20, AM Q30) */
+static const int32_t NET_GM[3][3] = {{78183061, -38067050, -38067050}, {-38067050, 78183061, -38067050}, {-38067050, -38067050, 78183061}};
+static const int32_t NET_AM[3][3] = {{1041718042, 15592264, 15592264}, {15592264, 1041718042, 15592264}, {15592264, 15592264, 1041718042}};
+#define NET_G_L5 791976   /* L5 + copper, uS Q20: i = g v + h, h' = g v + a i */
+#define NET_A_L5 1072119857
 #define LEVER_MAX 64u
-/* Knee lever taper (Q15): 0 = silent, then dB-linear -45..0 dB. ESTIMATE (R32's grading is not printed). */
-static const uint16_t LEVER_GAIN[65] = {
-    0, 200, 217, 235, 255, 276, 299, 325, 352, 382, 414, 449, 487,
-    528, 572, 621, 673, 730, 791, 858, 930, 1009, 1094, 1186, 1286, 1394,
-    1512, 1639, 1778, 1927, 2090, 2266, 2457, 2664, 2889, 3133, 3397, 3683, 3994,
-    4330, 4696, 5091, 5521, 5986, 6491, 7038, 7632, 8275, 8973, 9730, 10550, 11439,
-    12404, 13450, 14584, 15814, 17147, 18593, 20160, 21860, 23703, 25702, 27869, 30219, 32767,
+/* The knee lever = R32 across IN: its conductance (uS Q12) per lever step. Step 0 = 10 ohm (silent), then a log
+ * taper 50 ohm .. 1e+06 ohm (ESTIMATE: R32's 'special grading' is not printed). */
+static const int32_t NET_G_R32[65] = {
+    409600000, 70175635, 60114987, 51496672, 44113912, 37789572, 32371914, 27730953, 23755337,
+    20349681, 17432273, 14933115, 12792246, 10958301, 9387277, 8041481, 6888623, 5901044,
+    5055048, 4330337, 3709523, 3177712, 2722143, 2331886, 1997578, 1711197, 1465874,
+    1255720, 1075695, 921480, 789373, 676205, 579262, 496217, 425077, 364136,
+    311932, 267213, 228904, 196087, 167976, 143894, 123265, 105593, 90455,
+    77487, 66378, 56862, 48710, 41727, 35745, 30620, 26230, 22470,
+    19248, 16489, 14125, 12100, 10365, 8879, 7606, 6516, 5582,
+    4781, 4096,
 };
+#define NET_ISRC_MUL 2000   /* Q15 source sample -> current units (1 mA at full scale) */
+#define NET_OUT_MUL 1025   /* V_OUT units -> Q15, Q16: no tablets, lever open, 1 mA at the peak -> 14000 */
 
 /* Fine tune: 2^(c/1200) in Q16 for c = -50..+50 cents. */
 static const uint32_t TUNE_Q16[101] = {

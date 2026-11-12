@@ -1,0 +1,40 @@
+# Stage 4 checks (tests/check_engine.py stage4)
+# vibrato: TRUMPET has II; LFO -> III, LFO -> off, LFO -> I
+50 btn 5
+80 btn 5
+100 btn 5
+# I (4.5 Hz), AMP off, C4 held 0.3..2.8 s
+300 keys 0x80
+2800 keys 0
+2900 btn 5
+# II (5.5 Hz)
+3000 keys 0x80
+5500 keys 0
+5600 btn 5
+# III (6.5 Hz)
+5700 keys 0x80
+8200 keys 0
+# III with AMP (FX): the deep vibrato
+8300 btn 2
+8400 keys 0x80
+10900 keys 0
+11000 btn 2
+11050 btn 5
+# STOPS: tablets 1 and O (keys F3, A4), Sub I f (C#4); a screen; back to PLAY
+11200 btn 6
+11300 keys 0x1
+11350 keys 0
+11400 keys 0x10000
+11450 keys 0
+11500 keys 0x100
+11550 keys 0
+11700 shot
+11800 btn 6
+# C4 with Sub I f and tablets 1 O: f0/2 must be there
+12000 keys 0x80
+13500 keys 0
+13600 shot
+# presets: SELECT one step back from TRUMPET -> TENOR SAX
+13700 enc 0 -1
+13800 shot
+14000 end

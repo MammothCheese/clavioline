@@ -23,6 +23,14 @@ The article does not say which Selmer model it describes. It calls the instrumen
      - SOS says three octave dividers derive all pitches from a single top-octave tone generator. The 1952 article (and a 1953 Gibson Clavioline restorer, who describes a precision resistor chain behind the keys) describes a full 36-step resistor ladder on one multivibrator with no dividers.
      - The Concert has **22 tablets**: the 18 plus **Sub I** (one octave down) and **Sub II** (two octaves down), each with an "f" (forte) setting, mixed with the main tone.
      - So the Concert's tone generator differs from the circuit in the 1952 article. A Selmer "Clavioline Concert tone generator" schematic is listed online (el34world.com) but has not been read yet.
+6. **Selmer Electronics, "Tone Generator — Concert Clavioline", drawing DRG No. 1289** (el34world.com, `Selmer_clavioline_concert_tonegenerator.pdf`, 281 KB; a faint scan). Facts read from it:
+   - Valves: V1–V3 12AU7, V4 6BA6, V5–V7 12AU7.
+   - **The Concert keeps the full key resistor ladder** (resistors R260–R311 to the −30 V line) on a single oscillator, as in the 1952 article.
+   - Its sub-octaves come from **two extra divider stages (V5, V6, cross-coupled 12AU7 flip-flops, triggered through 75 pF)** and a mixer (V7), switched by four tablets: **I p, II p, I f, II f**.
+   - So SOS's "three octave dividers from a top-octave generator" does not describe the Concert's main pitch chain. The dividers exist only for Sub I / Sub II. **This settles the oscillator question in U10.**
+   - The control valve's anode load is **100 kΩ** and its coupling to the filter is **0.02 µF** (U2, partly). The keyboard HT is **150 V**.
+   - The filter section matches Fig. 4 tablet for tablet (1–9, O, A, B, V, the 100 pF output capacitor, 0.001 µF, 20 kΩ + 0.05 µF, the "special" R32). The scan is too faint to read most values, and **no inductances are marked**.
+   - Muting switches are ganged on the divider stage; their exact function was not determined.
 5. **antiqueradio.org, Gibson Clavioline (1953) restoration** (https://www.antiqueradio.org/GibsonClaviolineKeyboardInstrument.htm). It confirms the two key contacts closing with "a very slight delay" for a click-free attack, the resistor-chain keyboard, and the knee lever as a carbon-track potentiometer. It gives no tube types or filter values.
 
 ---

@@ -2,7 +2,8 @@
 
 A recreation of the 1950s Clavioline (monophonic valve keyboard, Constant Martin's design as built by Selmer) as
 custom FM-1 firmware: the oscillator, the gate and its attack, the tone-forming network and tablets, the knee lever,
-the vibrato and the valve amplifier, from *Electronic Engineering*, October 1952 and the sources listed in
+the vibrato, the Concert's sub-octaves and the valve amplifier, from *Electronic Engineering*, October 1952, the
+Selmer Concert tone-generator drawing and the other sources listed in
 [docs/CLAVIOLINE-ANALYSIS.md](docs/CLAVIOLINE-ANALYSIS.md). Status, controls and every estimate: [docs/CLAVIOLINE.md](docs/CLAVIOLINE.md).
 
 Built on **Dinghy** (zvenson/dinghy, commit ea1b6bf), whose platform layer is used unchanged apart from the app's name,

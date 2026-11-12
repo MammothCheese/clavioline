@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # CLAVIOLINE's host tests (from Dinghy's, FM-1 only; no hardware). Run from the repo root after ./build.sh:
 #   sh build.sh && sh tests/run_tests.sh
-# The Stage 2 sound checks (tests/run_stage2.sh), and Dinghy's update-path tests unchanged: M-UPGRADE entry,
+# The sound checks (tests/run_engine.sh), and Dinghy's update-path tests unchanged: M-UPGRADE entry,
 # the update loader and its screen, the installer.
 set -e
 export AC79_SDK="${AC79_SDK:-$HOME/fw-AC79_AIoT_SDK}"   # (fm1pkg_make.py: the SDK files of a package)
@@ -15,7 +15,7 @@ run() { echo "== $1"; shift; "$@" || fail=1; }
 
 [ -f build/clavioline.fwsc ] || { echo "run ./build.sh first"; exit 1; }
 
-run "Stage 2: highest note, legato, attack and P, coupler, knee lever, aliasing" sh tests/run_stage2.sh
+run "the instrument on the host: notes, attack, lever, vibrato, sub-octave; the network against the reference" sh tests/run_engine.sh
 
 $CC -o "$OUT/ota_test" tests/ota_test.c
 run "M-UPGRADE entry (FM-1)" "$OUT/ota_test" build/clavioline.fwsc

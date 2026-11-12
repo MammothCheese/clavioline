@@ -1,11 +1,12 @@
-# CLAVIOLINE (from Dinghy's workflow): build the FM-1 package on GitHub, run the host tests, and on a tag vX.Y publish the release with a build
-# attestation (actions/attest-build-provenance): the Firmware Hub shows "Built from source" for exactly these files.
+# CLAVIOLINE (from Dinghy's workflow): build the FM-1 package on GitHub and run the host tests on every push to main
+# (the package is the run's artifact); on a tag vX.Y also publish a release with a build attestation.
 # The JieLi toolchain comes from pkgman.jieliapp.com (tools/get_toolchain.sh), the AC79 SDK from gitee.com, as in
 # sloopDX's and OberVave's workflows. Run by hand (workflow_dispatch) for a test build without a release.
 name: release
 
 on:
   push:
+    branches: [main]
     tags: ['v*']
   workflow_dispatch:
 
