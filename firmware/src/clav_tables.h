@@ -123,7 +123,7 @@ static const int32_t NET_G_R32[65] = {
     4781, 4096,
 };
 #define NET_ISRC_MUL 2000   /* Q15 source sample -> current units (1 mA at full scale) */
-#define NET_OUT_MUL 563   /* V_OUT units -> Q15, Q16: no tablets, lever open, 1 mA at the peak -> 14000 */
+#define NET_OUT_MUL 310   /* V_OUT units -> Q15, Q16: no tablets, lever open, 1 mA at the peak -> 14000 */
 
 /* Fine tune: 2^(c/1200) in Q16 for c = -50..+50 cents. */
 static const uint32_t TUNE_Q16[101] = {

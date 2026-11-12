@@ -1,6 +1,8 @@
-# a high note held: alias check. Vibrato off, window +1, coupler HIGH: G5 key -> G7 (3136 Hz)
-50 btn 5
-80 btn 5
+# a high note held: alias check. Vibrato off (STOPS, G#3), window +1, coupler HIGH: G5 key -> G7 (3136 Hz)
+50 btn 7
+60 keys 0x8
+70 keys 0
+80 btn 7
 100 enc 1 1
 150 btn 1
 300 keys 0x4000000

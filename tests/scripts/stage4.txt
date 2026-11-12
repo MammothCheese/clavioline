@@ -1,27 +1,45 @@
-# Stage 4 checks (tests/check_engine.py stage4)
-# vibrato: TRUMPET has II; LFO -> III, LFO -> off, LFO -> I
-50 btn 5
-80 btn 5
-100 btn 5
+# Stage 4 checks (tests/check_engine.py stage4). STOPS black keys: F#3 III (bit 1), G#3 II (3), A#3 I (5), C#4 AMP (8)
+# TRUMPET has vibrato II: STOPS, II off, I on, back
+50 btn 7
+60 keys 0x8
+70 keys 0
+80 keys 0x20
+90 keys 0
+100 btn 7
 # I (4.5 Hz), AMP off, C4 held 0.3..2.8 s
 300 keys 0x80
 2800 keys 0
-2900 btn 5
-# II (5.5 Hz)
+# II (5.5 Hz): I off, II on
+2850 btn 7
+2860 keys 0x20
+2870 keys 0
+2880 keys 0x8
+2890 keys 0
+2900 btn 7
 3000 keys 0x80
 5500 keys 0
-5600 btn 5
-# III (6.5 Hz)
+# III (6.5 Hz): II off, III on
+5550 btn 7
+5560 keys 0x8
+5570 keys 0
+5580 keys 0x2
+5590 keys 0
+5600 btn 7
 5700 keys 0x80
 8200 keys 0
-# III with AMP (FX): the deep vibrato
-8300 btn 2
+# III with AMP: the deep vibrato
+8250 btn 7
+8260 keys 0x100
+8270 keys 0
+8280 btn 7
 8400 keys 0x80
 10900 keys 0
-11000 btn 2
-11050 btn 5
-# STOPS (GLO): tablets 1 and O (keys F3, A4)
+# STOPS: AMP and III off; tablets 1 and O (keys F3, A4)
 11200 btn 7
+11210 keys 0x100
+11220 keys 0
+11230 keys 0x2
+11240 keys 0
 11300 keys 0x1
 11350 keys 0
 11400 keys 0x10000

@@ -68,16 +68,25 @@ def has(cfg, name):
     return (cfg >> BIT[name]) & 1
 
 
-def elements(cfg: int, lever: int):
+# The chip runs two simplifications (docs/ENGINE.md), measured against the drawing in tools/plot_net.py's terms:
+#   the 0.02 uF coupling capacitor C5 becomes a first-order high-pass on the source (CLAV_HP_HZ), with R5 at IN:
+#   within 0.8 dB from the lowest note (87 Hz) up; C17 (+ R29, R30) is left out while V is up: within 0.04 dB.
+CLAV_HP_HZ = 1.0 / (2 * np.pi * 0.02e-6 * (100e3 + 12e3))
+
+
+def elements(cfg: int, lever: int, full: bool = False):
     """Two-terminal elements as (kind, n1, n2, value): kind R (ohm) or C (farad). Coupled windings separately."""
     s = lambda n: has(cfg, n)
-    e = [("R", ND["A"], GND, P["R5"]), ("C", ND["A"], ND["IN"], P["C5"]),
+    e = [("R", ND["A"], GND, P["R5"]), ("C", ND["A"], ND["IN"], P["C5"])] if full else [("R", ND["IN"], GND, P["R5"])]
+    e += [
          ("C", ND["IN"], ND["OUT"], P["C30"] + s("7") * P["C24"] + s("8") * P["C25"] + s("9") * P["C26"]),
-         ("C", ND["IN"], ND["a"], P["C17"]), ("R", ND["a"], ND["NV"], P["R29"]), ("R", ND["NV"], GND, P["R30"]),
+         ("R", ND["a"], ND["NV"], P["R29"]), ("R", ND["NV"], GND, P["R30"]),
          ("C", ND["IN"], GND, P["C28"]), ("R", ND["IN"], ND["b"], P["R31"]), ("C", ND["b"], GND, P["C29"]),
          ("R", ND["IN"], GND, r32(lever)), ("R", ND["OUT"], GND, P["RIN"]), ("C", ND["OUT"], GND, P["COUT"]),
          ("R", ND["OUT"], ND["N1"], P["RP_L5"]), ("R", ND["IN"], ND["NB"], P["RPA"]),
          ("R", ND["NB"], ND["N1"], P["RPB"]), ("R", ND["N3"], GND, P["RPC"])]
+    if s("V") or full:
+        e.append(("C", ND["IN"], ND["a"], P["C17"]))
     if s("V"):
         e.append(("R", ND["NV"], GND, P["R_SHORT"]))
     csh = s("1") * P["C18"] + s("2") * P["C19"]
@@ -131,12 +140,13 @@ def stamp_coupled(Y, ports, Yp):
                         Y[r, c] += sr * sc * y
 
 
-def ac(cfg: int, lever: int, f):
-    """V_OUT / I_V2 (ohm) at frequencies f (Hz), with the source current into node A."""
+def ac(cfg: int, lever: int, f, full: bool = False):
+    """V_OUT / I_V2 (ohm) at frequencies f (Hz). full=False: the network the chip runs (source into IN; the
+    coupling high-pass applied separately, not included here); full=True: as drawn (source into node A, C5)."""
     f = np.atleast_1d(np.asarray(f, float))
     out = np.zeros(len(f), complex)
     Lm, R = lmatrix(), rw()
-    els = elements(cfg, lever)
+    els = elements(cfg, lever, full)
     for i, fi in enumerate(f):
         s = 2j * np.pi * fi
         Y = np.zeros((N, N), complex)
@@ -146,7 +156,7 @@ def ac(cfg: int, lever: int, f):
             stamp(Y, a, b, 1.0 / v if kind == "R" else s * v)
         stamp(Y, ND["OUT"], ND["N1"], 1.0 / (P["R_L5"] + s * P["L5"]))
         stamp_coupled(Y, WINDINGS, np.linalg.inv(R + s * Lm))
-        J = np.zeros(N, complex); J[ND["A"]] = 1.0
+        J = np.zeros(N, complex); J[ND["A" if full else "IN"]] = 1.0
         out[i] = np.linalg.solve(Y, J)[ND["OUT"]]
     return out
 

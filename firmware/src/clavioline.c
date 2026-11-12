@@ -11,8 +11,7 @@
  *   ALGORITHM   the keyboard window, +0 / +1 octave (the FM-1's 27 keys over the original's 36, F..E)
  *   SELECT      presets: the 1952 Table 1, the Selmer voicings quoted by Sound On Sound, 4 user slots
  *   SAVE        store the tablets and the coupler in the user slot shown
- *   LFO         vibrato speed: off, I (4.5 Hz), II (5.5), III (6.5)      FX   vibrato amplitude (the AMP tablet)
- *   ENV         tablet P (the short attack)                              GLO  STOPS mode
+ *   GLO         STOPS mode (vibrato, P and the sub-octaves are tablets there); FX SEL ENV LFO EDIT do nothing here
  *   KNOB 1      fine tune +-50 cents (VR6)
  * STOPS mode (GLO or HOME back; nothing is lost)
  *   white keys  F3..E5: tablets 1 2 3 4 5 6 7 8 9 O A B V P;  F5: all tone tablets off
@@ -41,10 +40,11 @@ static void app_idle(void);
 #define EDGE_K_Q16 144507u                      /* trapezoid edge: t_e * FS / 2, Q16; t_e = 100 us. ESTIMATE ("trapezoidal": visible slopes) */
 #define SUB_F 12000                             /* Sub I / II "f": as loud as the main tone. ESTIMATE */
 #define SUB_P 3795                              /* "p": 10 dB softer. ESTIMATE */
-#define T_ON 132u                               /* key contact 1 (oscillator) to contact 2 (gate): 3 ms. ESTIMATE */
-#define T_OFF 176u                              /* on release, contact 2 opens 4 ms before contact 1. ESTIMATE */
-#define FADE_STEP 372                           /* oscillator stop: 2 ms fade against a click (not historical) */
-#define DC_R 32697                              /* DC blocker, ~15 Hz, Q15 */
+#define T_ON 66u                                /* key contact 1 (oscillator) to contact 2 (gate): 3 ms at 22.05 kHz. ESTIMATE */
+#define T_OFF 88u                               /* on release, contact 2 opens 4 ms before contact 1. ESTIMATE */
+#define FADE_STEP 744                           /* oscillator stop: 2 ms fade against a click (not historical) */
+#define HP_A_Q13 8028                           /* C5's coupling, as a high-pass on the source: ~71 Hz at 22.05 kHz, Q13 */
+#define IDLE_N 4410u                            /* 100 ms of silence after a note: the engine rests (no work) */
 #define VIB_BIG_Q16 1211                        /* vibrato, AMP on: +-32 cents (ln2/1200 * 32 * 65536). ESTIMATE */
 #define VIB_SMALL_Q16 318                       /* AMP off: 3.8x smaller (DERIVED ratio, Fig. 3 R23/R24) */
 #define VIB_AM_Q15 983                          /* "a small amount of amplitude modulation": +-3 %. ESTIMATE */
@@ -68,7 +68,8 @@ static net_state_t net_st;
 
 static struct {
     uint32_t ph, held, pend_on, pend_off, lfo, sub;
-    int32_t run, stopping, gate, fade, carry, dcx, dcy, xfade, xdir, g, gstep, hy, xh[7], yh[4];
+    int32_t run, stopping, gate, fade, carry, dcx, dcy, xfade, xdir, g, gstep, yh[4], hp, hpx;
+    uint32_t quiet, idle;
     int32_t x[3];                               /* V2 cathode network, Q30: 1 = cut off, 0 = conducting */
 } au = {.x = {1 << 30, 1 << 30, 1 << 30}, .xfade = 32767};
 
@@ -102,22 +103,32 @@ static int32_t trap_naive(uint32_t p, int32_t h, uint32_t m)
 static int32_t valve(int32_t y)                 /* the amplifier: mostly 2nd harmonic, then a soft ceiling */
 {
     int32_t u;
-    y += (int32_t)(((((int64_t)y * y) >> 15) * VALVE_D_Q15) >> 15);
+    y = y > 46000 ? 46000 : y < -46000 ? -46000 : y;   /* (32-bit products below) */
+    y += (((y * y) >> 15) * VALVE_D_Q15) >> 15;
     u = y > 32767 ? 32767 : y < -32767 ? -32767 : y;
-    return u + (u >> 1) - (int32_t)(((((int64_t)u * u) >> 15) * u) >> 16);   /* 1.5u - 0.5u^3 */
+    return u + (u >> 1) - ((((u * u) >> 15) * u) >> 16);   /* 1.5u - 0.5u^3 */
 }
 
+/* The audio interrupt. The instrument (key contacts, gate, oscillator, sub-octaves, coupling, tone network) runs at
+ * 22.05 kHz, one step for every two output samples; a 4-point half-band interpolator brings it to 44.1 kHz, where
+ * the valve amplifier and the DC blocker run. After 100 ms of silence it rests and costs nothing. */
 static void app_audio(int32_t *out, uint32_t n)
 {
-    uint32_t i, k, tabs = a_tabs, held = a_held, h, m, invi, c[4], inc = a_inc;
+    uint32_t i, k, tabs = a_tabs, held = a_held, h, m, invi, c[4], inc = a_inc, inc2;
     int32_t S, ds[4], sounding = 0, am = 32767, s1, s2;
     const net_coef_t *nc;
     uint32_t t0 = fm1_ticks();
 
+    if (au.idle && net_pending) {               /* resting: a new network goes in at once (nothing to fade) */
+        net_cur ^= 1u;
+        net_adopt(&net_st, &net_buf[net_cur]);
+        net_pending = 0;
+        au.xdir = 0;
+        au.xfade = 32767;
+    }
     /* the network: adopt a new one now, or after fading out (a tablet change: real tablets click) */
     if (net_pending && (net_pending != 3u || (au.xdir < 0 && au.xfade <= 0))) {
         net_cur ^= 1u;
-        if (net_buf[net_cur].half != net_buf[net_cur ^ 1u].half) memset(&net_st, 0, sizeof net_st);
         net_adopt(&net_st, &net_buf[net_cur]);
         if (net_pending == 3u) au.xdir = 1;
         net_pending = 0;
@@ -125,6 +136,11 @@ static void app_audio(int32_t *out, uint32_t n)
         au.xdir = -1;
     }
     nc = &net_buf[net_cur];
+
+    if (au.idle) {                              /* silent: nothing to compute until a key goes down */
+        if (!held) { a_sounding = 0; a_load = 0; return; }
+        au.idle = 0;
+    }
 
     /* vibrato (Fig. 3): the highest speed tablet down sets the rate; AMP the depth */
     k = tabs & TB(T_VIB3) ? 2u : tabs & TB(T_VIB2) ? 1u : tabs & TB(T_VIB1) ? 0u : 3u;
@@ -137,17 +153,19 @@ static void app_audio(int32_t *out, uint32_t n)
     s1 = (tabs & TB(T_SUB1F) ? SUB_F : 0) + (tabs & TB(T_SUB1P) ? SUB_P : 0);
     s2 = (tabs & TB(T_SUB2F) ? SUB_F : 0) + (tabs & TB(T_SUB2P) ? SUB_P : 0);
 
+    inc2 = inc << 1;                            /* the phase step at 22.05 kHz */
     h = (uint32_t)(((uint64_t)inc * EDGE_K_Q16) >> 16);   /* edges fixed in time (ESTIMATE) */
     if (h < 4096u) h = 4096u;
     if (h > 0x3FFFFFFFu) h = 0x3FFFFFFFu;
     m = ((uint32_t)OSC_AMP << 16) / (h >> 8);
-    S = (int32_t)(((uint64_t)inc * m) >> 24);
-    invi = 0xFFFFFFFFu / ((inc >> 8) | 1u);
+    S = (int32_t)(((uint64_t)inc2 * m) >> 24);  /* edge slope, per 22.05 kHz step */
+    invi = 0xFFFFFFFFu / ((inc2 >> 8) | 1u);
     c[0] = 0u - h; c[1] = h; c[2] = 0x80000000u - h; c[3] = 0x80000000u + h;
     ds[0] = S; ds[1] = -S; ds[2] = -S; ds[3] = S;
 
-    for (i = 0; i < n; i++) {
-        int32_t v = 0, g, y;
+    for (i = 0; i < n; i += 2u) {
+        int32_t v = 0, g, y, yi, o;
+        uint32_t j;
 
         if (held && !au.held) {                 /* key contacts: 1 starts the oscillator, 2 opens the gate */
             au.pend_off = 0;
@@ -164,7 +182,7 @@ static void app_audio(int32_t *out, uint32_t n)
         if (au.pend_on && !--au.pend_on) au.gate = 1;
         if (au.pend_off && !--au.pend_off) au.stopping = 1;
 
-        if (!(i & 7u)) {                        /* V2's cathode network, stepped every 8 samples (exactly) */
+        if (!(i & 7u)) {                        /* V2's cathode network, stepped every 8 output samples (exactly) */
             const int32_t (*phi)[3], *gam;
             int32_t x0 = au.x[0], x1 = au.x[1], x2 = au.x[2], vk, gt;
             uint32_t idx, frac;
@@ -178,7 +196,7 @@ static void app_audio(int32_t *out, uint32_t n)
             idx = (uint32_t)vk >> 22;
             frac = ((uint32_t)vk >> 6) & 0xFFFFu;
             gt = GATE_GAIN[idx] + (int32_t)((((int32_t)GATE_GAIN[idx + 1u] - (int32_t)GATE_GAIN[idx]) * (int32_t)frac) >> 16);
-            au.gstep = (gt - au.g) >> 3;        /* the gain glides there over the 8 samples */
+            au.gstep = (gt - au.g) >> 2;        /* the gain glides there over the 4 steps */
         }
         g = au.g;
         au.g += au.gstep;
@@ -186,9 +204,9 @@ static void app_audio(int32_t *out, uint32_t n)
         if (au.run) {
             int32_t subs, carry_next = 0;
             v = trap_naive(au.ph, (int32_t)h, m) + au.carry;
-            for (k = 0; k < 4u; k++) {           /* polyBLAMP at each corner inside (ph, ph + inc] */
+            for (k = 0; k < 4u; k++) {           /* polyBLAMP at each corner inside (ph, ph + inc2] */
                 uint32_t dlt = c[k] - au.ph;
-                if (dlt - 1u < inc) {
+                if (dlt - 1u < inc2) {
                     uint32_t d = (uint32_t)(((uint64_t)(dlt >> 8) * invi) >> 16);
                     if (d > 65536u) d = 65536u;
                     v += (int32_t)(((int64_t)ds[k] * cube6(65536u - d)) >> 16);
@@ -197,7 +215,7 @@ static void app_audio(int32_t *out, uint32_t n)
             }
             subs = (au.sub & 1u ? s1 : -s1) + (au.sub & 2u ? s2 : -s2);
             v += subs;
-            if (au.ph > 0xFFFFFFFFu - inc) {     /* a new period: the dividers flip (Concert V5, V6), polyBLEP */
+            if (au.ph > 0xFFFFFFFFu - inc2) {    /* a new period: the dividers flip (Concert V5, V6), polyBLEP */
                 uint32_t d = (uint32_t)(((uint64_t)((0u - au.ph) >> 8) * invi) >> 16), was = au.sub;
                 int32_t step;
                 if (d > 65536u) d = 65536u;
@@ -208,47 +226,55 @@ static void app_audio(int32_t *out, uint32_t n)
                 carry_next -= (int32_t)(((int64_t)step * sq2(d)) >> 16);
             }
             au.carry = carry_next;
-            au.ph += inc;
+            au.ph += inc2;
             if (au.stopping) {
                 au.fade -= FADE_STEP;
                 if (au.fade <= 0) { au.fade = 0; au.run = 0; au.stopping = 0; au.carry = 0; }
             }
-            v = (int32_t)(((int64_t)v * au.fade) >> 15);
+            v = (v * au.fade) >> 15;            /* (|v| < 45000: 32-bit products) */
         }
-        v = (int32_t)(((int64_t)v * g) >> 15);   /* the control valve */
-        v = (int32_t)(((int64_t)v * am) >> 15);
-        if (!nc->half) {
-            y = net_step(&net_st, nc, v * NET_ISRC_MUL);   /* the tone-forming network, knee lever inside */
-        } else {                                /* light mode: the network at 22.05 kHz between half-band filters */
-            int32_t *xh = au.xh, *yh = au.yh;
-            xh[0] = xh[1]; xh[1] = xh[2]; xh[2] = xh[3]; xh[3] = xh[4]; xh[4] = xh[5]; xh[5] = xh[6];
-            xh[6] = v * NET_ISRC_MUL;
-            if (!(i & 1u)) {
-                y = au.hy;                      /* (the network sample before the midpoint below) */
-            } else {
-                int64_t d = ((int64_t)xh[3] * 16 + ((int64_t)xh[2] + xh[4]) * 9 - ((int64_t)xh[0] + xh[6])) >> 5;
-                yh[0] = yh[1]; yh[1] = yh[2]; yh[2] = yh[3];
-                yh[3] = net_step(&net_st, nc, (int32_t)d);   /* down: [-1 0 9 16 9 0 -1] / 32 */
-                y = (int32_t)((((int64_t)yh[1] + yh[2]) * 9 - ((int64_t)yh[0] + yh[3])) >> 4);   /* up: the midpoint */
-                au.hy = yh[2];
+        v = (v * g) >> 15;                      /* the control valve */
+        v = (v * am) >> 15;
+        {                                       /* C5, the coupling capacitor: a first-order high-pass */
+            int32_t hp = ((au.hp + v - au.hpx) * HP_A_Q13) >> 13;
+            au.hpx = v;
+            au.hp = hp;
+            v = hp;
+        }
+        au.yh[0] = au.yh[1]; au.yh[1] = au.yh[2]; au.yh[2] = au.yh[3];
+        au.yh[3] = net_step(&net_st, nc, v * NET_ISRC_MUL);   /* the tone-forming network, knee lever inside */
+
+        for (j = 0; j < 2u; j++) {              /* two output samples: the network's, then the half-band midpoint */
+            if (!j) y = au.yh[1];
+            else y = (int32_t)((((int64_t)au.yh[1] + au.yh[2]) * 9 - ((int64_t)au.yh[0] + au.yh[3])) >> 4);
+            yi = (int32_t)(((int64_t)y * NET_OUT_MUL) >> 16);
+            if (au.xdir) {                      /* tablet change: 2.9 ms out, 2.9 ms in */
+                au.xfade += au.xdir * 256;
+                if (au.xfade >= 32767) { au.xfade = 32767; au.xdir = 0; }
+                if (au.xfade < 0) au.xfade = 0;
             }
+            yi = yi > 60000 ? 60000 : yi < -60000 ? -60000 : yi;
+            yi = (yi * au.xfade) >> 15;
+            yi = valve(yi);
+            au.dcy += yi * 256 - au.dcx - (au.dcy >> 9);   /* DC blocker, ~14 Hz, Q8 */
+            au.dcx = yi * 256;
+            o = au.dcy >> 8;
+            if (o > 2 || o < -2 || au.run) au.quiet = 0;
+            else if (au.quiet < IDLE_N) au.quiet++;
+            if (o > 2 || o < -2) sounding = 1;
+            out[2u * (i + j)] += o;
+            out[2u * (i + j) + 1u] += o;
         }
-        y = (int32_t)(((int64_t)y * NET_OUT_MUL) >> 16);
-        if (au.xdir) {                          /* tablet change: 2.9 ms out, 2.9 ms in */
-            au.xfade += au.xdir * 256;
-            if (au.xfade >= 32767) { au.xfade = 32767; au.xdir = 0; }
-            if (au.xfade < 0) au.xfade = 0;
-        }
-        y = (int32_t)(((int64_t)y * au.xfade) >> 15);
-        y = valve(y);
-        au.dcy = y * 256 - au.dcx + (int32_t)(((int64_t)au.dcy * DC_R) >> 15);   /* Q8 */
-        au.dcx = y * 256;
-        y = au.dcy >> 8;
-        if (y > 2 || y < -2) sounding = 1;
-        out[2u * i] += y;
-        out[2u * i + 1u] += y;
     }
     a_sounding = (uint32_t)(sounding | au.run);
+    if (au.quiet >= IDLE_N && !held && !au.run) {   /* rest: the network and filters back to zero, the gate shut */
+        memset(&net_st, 0, sizeof net_st);
+        memset(au.yh, 0, sizeof au.yh);
+        au.hp = au.hpx = au.dcx = au.dcy = au.g = au.gstep = 0;
+        au.x[0] = au.x[1] = au.x[2] = 1 << 30;
+        au.quiet = 0;
+        au.idle = 1;
+    }
     {                                           /* the load: this render's time against the 5.8 ms it may take */
         uint32_t pm = (fm1_ticks() - t0) / (HALF_FRAMES_TICKS / 1000u);
         a_load = pm;
@@ -551,12 +577,7 @@ static const uint8_t TEST_NOTE[5] = {60, 62, 64, 65, 67};                       
 static void app_main(void)
 {
     uint32_t prev = 0, k, t_change = 0, dirty = 0, t_lever = 0, stops = 0, drone = 0, drone_note = 0;
-    uint32_t net_tabs = ~0u, net_lever = ~0u, t_msg = 0, t_cpu = 0, cpu_over = 0, net_light, tnotes = 0;
-#ifdef CLAV_FULL_RATE
-    uint32_t light = 0;                         /* the network at 44.1 kHz: more than the FM-1 has time for */
-#else
-    uint32_t light = 1;                         /* the network at 22.05 kHz, as the FM-1 runs it (docs/ENGINE.md) */
-#endif
+    uint32_t net_tabs = ~0u, net_lever = ~0u, t_msg = 0, t_cpu = 0, cpu_over = 0, tnotes = 0;
     char cpu_txt[40] = "CPU";
     uint32_t drawn_note = ~0u, drawn_lever = ~0u, drawn_cpl = ~0u, drawn_st = ~0u, drawn_tabs = ~0u, drawn_pre = ~0u;
     uint32_t drawn_stops = ~0u;
@@ -571,11 +592,10 @@ static void app_main(void)
         for (k = 0; k < NUSER; k++) set.user[k].tabs = 0;
         apply_preset(5);                        /* TRUMPET: the raw tone with vibrato II */
     }
-    net_compute(&net_buf[0], set.tabs, lever, light);   /* the network before the sound starts */
+    net_compute(&net_buf[0], set.tabs, lever, 1);   /* the network (at 22.05 kHz) before the sound starts */
     net_adopt(&net_st, &net_buf[0]);
     net_tabs = set.tabs & NET_TABS;
     net_lever = lever;
-    net_light = light;
     a_tabs = set.tabs;
 
     lcd_fill(0, 0, 240, 240, C_NAVY);
@@ -635,15 +655,6 @@ static void app_main(void)
         }
         if (b & (1u << BTN_OCT_DOWN) && set.coupler > -1) { set.coupler--; edited = 1; dirty = 1; changed = 1; t_change = fm1_ms; }
         if (b & (1u << BTN_OCT_UP) && set.coupler < 1) { set.coupler++; edited = 1; dirty = 1; changed = 1; t_change = fm1_ms; }
-        if (b & (1u << BTN_ENV)) { set.tabs ^= TB(T_P); edited = 1; dirty = 1; t_change = fm1_ms; }
-        if (b & (1u << BTN_FX)) { set.tabs ^= TB(T_AMP); edited = 1; dirty = 1; t_change = fm1_ms; }
-        if (b & (1u << BTN_LFO)) {              /* off -> I -> II -> III -> off */
-            uint32_t v = set.tabs & TB(T_VIB3) ? 3u : set.tabs & TB(T_VIB2) ? 2u : set.tabs & TB(T_VIB1) ? 1u : 0u;
-            set.tabs &= ~(TB(T_VIB1) | TB(T_VIB2) | TB(T_VIB3));
-            v = (v + 1u) & 3u;
-            if (v) set.tabs |= TB(T_VIB1 + v - 1u);
-            edited = 1; dirty = 1; t_change = fm1_ms;
-        }
         if (b & (1u << BTN_SAVE)) {
             if (set.preset >= NFACT) {
                 set.user[set.preset - NFACT].tabs = set.tabs;
@@ -682,10 +693,9 @@ static void app_main(void)
         a_tabs = set.tabs;
 
         /* a new network when the tablets or the lever moved (and the ISR has taken the last one) */
-        if (!net_pending && ((set.tabs & NET_TABS) != net_tabs || lever != net_lever || light != net_light)) {
-            uint32_t topo = (set.tabs & NET_TABS) != net_tabs || light != net_light;
-            net_compute(&net_buf[net_cur ^ 1u], set.tabs, lever, light);
-            net_light = light;
+        if (!net_pending && ((set.tabs & NET_TABS) != net_tabs || lever != net_lever)) {
+            uint32_t topo = (set.tabs & NET_TABS) != net_tabs;
+            net_compute(&net_buf[net_cur ^ 1u], set.tabs, lever, 1);
             net_tabs = set.tabs & NET_TABS;
             net_lever = lever;
             net_pending = topo ? 3u : 1u;
@@ -704,13 +714,8 @@ static void app_main(void)
                 if (tnotes >> k & 1u) fm1_led_key(TEST_BTN[k], 1);
                 else { fm1_led_key(TEST_BTN[k], 0); fm1_led_key_glow(TEST_BTN[k], 1); }
             }
-        } else {
-            for (k = 0; k < 5u; k++) fm1_led_key_glow(TEST_BTN[k], 0);
-            fm1_led_key(BTN_SEL, 0);
-            fm1_led_key(BTN_EDIT, 0);
-            fm1_led_key(BTN_ENV, set.tabs >> T_P & 1u);
-            fm1_led_key(BTN_FX, set.tabs >> T_AMP & 1u);
-            fm1_led_key(BTN_LFO, (set.tabs & (TB(T_VIB1) | TB(T_VIB2) | TB(T_VIB3))) != 0);
+        } else {                                /* PLAY: those buttons do nothing, and stay dark */
+            for (k = 0; k < 5u; k++) { fm1_led_key_glow(TEST_BTN[k], 0); fm1_led_key(TEST_BTN[k], 0); }
         }
         fm1_led_key(BTN_GLO, stops);
         fm1_led_key(BTN_PLAY, drone);

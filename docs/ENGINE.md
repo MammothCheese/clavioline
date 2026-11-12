@@ -17,7 +17,8 @@ keys / MIDI ─► highest note ─► oscillator (trapezoid) ─┬─► contr
 | Notes | `firmware/src/clavioline.c` | A count per MIDI note from keys, MIDI in and the STOPS drone; the highest wins. The pitch changes at once, and the gate stays open while any note is held |
 | Oscillator | `clavioline.c` | A 32-bit phase accumulator. Trapezoid with 50 % duty and edges of fixed duration, anti-aliased with polyBLAMP at its four corners |
 | Sub-octaves | `clavioline.c` | Flip-flops toggled on each oscillator period (÷2, ÷4), square waves with polyBLEP; **p** and **f** levels |
-| Control valve | `clavioline.c`, tables from `tools/gen_clav_tables.py` | The cathode network (C1–C3, R1, R3, R4, R7, R8) discretised exactly per sample; tablet P selects the other matrix. Gain follows a remote-cut-off curve |
+| Control valve | `clavioline.c`, tables from `tools/gen_clav_tables.py` | The cathode network (C1–C3, R1, R3, R4, R7, R8) discretised exactly over 8 samples; tablet P selects the other matrix. Gain follows a remote-cut-off curve |
+| Coupling | `clavioline.c` | C5, the control valve's 0.02 µF coupling capacitor, as a first-order high-pass at 71 Hz on the source |
 | Tone network | `firmware/src/clav_net.h`, reference `tools/clav_net_ref.py` | Below |
 | Amplifier | `clavioline.c` | y + d·y², a soft ceiling (1.5u − 0.5u³), DC blocker |
 
@@ -28,36 +29,49 @@ The network is simulated element for element. The netlist is in [HISTORY.md](HIS
 - **Discretisation:** every capacitor and coil is a trapezoidal (bilinear) companion model.
   - The four coupled windings use their inductance matrix.
   - Coil losses are a series copper resistance and a parallel core-loss resistance.
-- **Per sample:** the network is solved in DK form, `v = KC·xc + KL·hl + KU·i`, with capacitor voltages and coil currents as the states.
-  - That is at most 8 node voltages × 15 multiply-accumulates, all in 32-bit integers with 64-bit sums, 22,050 times a second.
+- **Per step:** the network is solved in DK form, `v = K·st + KU·i`, with capacitor voltages and coil currents as the states.
+  - That is 6 node voltages × 9–13 multiply-accumulates (depending on the tablets), all in 32-bit integers with
+    64-bit sums, 22,050 times a second.
 - **When the gains change:** the gains (KC, KL, KU) depend on the tablets and the knee lever. When either changes, the main loop:
   - rebuilds the conductance matrix exactly in integers;
   - inverts it in a small software floating point (the chip has no FPU);
   - hands the new gains to the audio interrupt.
 - **Tablet changes** fade out and in over 3 ms each way.
 
-### The network rate, and the CPU load
+### Rates, and the CPU load
 
-The network runs at **22.05 kHz**, half the audio rate. At 44.1 kHz it needs more time than the FM-1 has: a render
-that overruns its 5.8 ms makes the FM-1 replay the previous block, which sounds like a harsh buzz.
+A render that overruns its 5.8 ms makes the FM-1 replay the previous block, which sounds like a harsh buzz. So the
+instrument runs at **22.05 kHz**, half the audio rate:
+- **At 22.05 kHz:** the key contacts, the control valve, the oscillator and sub-octaves (anti-aliased for that rate),
+  the coupling high-pass and the tone network, one step for every two output samples;
+- **Back up to 44.1 kHz:** a 4-point half-band interpolator `[-1 9 9 -1] / 16`;
+- **At 44.1 kHz:** the valve amplifier and the DC blocker, so the amplifier's distortion does not alias.
 
-- **Around the network:** a 7-tap half-band filter `[-1 0 9 16 9 0 -1] / 32` takes the source down to 22.05 kHz, and a
-  4-point half-band interpolator `[-1 9 9 -1] / 16` brings the output back up.
-- **Coil constants:** they are computed for 22.05 kHz, and the network still matches the exact analysis within
-  **0.14 dB** up to 9 kHz.
-- **Against a 44.1 kHz network:** harmonics below 8 kHz differ by 0.7 dB on a typical preset, and by up to 6.5 dB on
-  the brightest (Harpsichord).
-- **Aliasing:** on the highest note (3136 Hz) it sits 41.8 dB below the harmonics.
-- **Full rate:** building with `-DCLAV_FULL_RATE` runs the network at 44.1 kHz, for the PC or for faster hardware.
+At that rate:
+- the network's coil constants are computed for 22.05 kHz, and it matches the exact analysis within **0.14 dB** up to 9 kHz;
+- on the highest note (3136 Hz), aliasing sits **39.6 dB** below the harmonics.
 
-The interrupt times itself against its 5.8 ms:
-- STOPS mode shows the load on the bottom line, as `CPU nn%  PEAK nn%`;
-- if the peak passes 90 %, PLAY mode shows `AUDIO OVERLOAD` instead.
+Two parts of the drawing are simplified:
+
+| Part | On the chip | Difference from the drawing |
+|---|---|---|
+| C5, the 0.02 µF coupling capacitor | A first-order high-pass at 71 Hz on the source; R5 moves to the network input | Within 0.8 dB from the lowest note (87 Hz) up |
+| C17, the V tablet's 100 pF (with R29, R30) | Left out while V is up; it then sits behind 3 MΩ | Within 0.04 dB |
+
+Both remove a state and a node from every step. `tools/clav_net_ref.py` models the network as the chip runs it, and
+`full=True` gives it as drawn.
 
 Other savings:
 - only the states in circuit and the nodes something reads are computed;
-- every multiply is 32 × 32 → 64;
-- the control valve's cathode network steps every 8 samples (with its exact 8-step matrix), and its gain glides in between.
+- every multiply is 32 × 32 → 64, and most per-sample arithmetic is plain 32-bit;
+- the control valve's cathode network steps every 8 output samples (with its exact 8-step matrix), and its gain glides
+  in between;
+- **after 100 ms of silence the engine rests and does no work** until a key goes down.
+
+The interrupt times itself against its 5.8 ms:
+- STOPS mode shows the load on the bottom line, as `CPU nn%  PEAK nn%`. The figure includes the platform's own
+  interrupts (key scanning, USB) that land inside a render;
+- if the peak passes 90 %, PLAY mode shows `AUDIO OVERLOAD` instead.
 
 **Accuracy:** `tests/net_check.py` drives the chip's code with white noise and compares the result with the exact
 analysis of the same netlist, frequency warping included. Across 29 tablet and lever combinations it agrees within
@@ -120,7 +134,7 @@ them:
 | Legato note change | no new attack (0.6 dB level change) |
 | Attack to −40 / −20 / −3 dB | 12 / 26 / 62 ms; with P 2 / 4 / 6 ms |
 | Knee lever from step 48 to 8 | −38 dB |
-| Aliasing on a 3136 Hz note | −41.8 dB below the harmonics |
+| Aliasing on a 3136 Hz note | −39.6 dB below the harmonics |
 | Vibrato I / II / III | 4.49 / 5.52 / 6.49 Hz; deep / shallow depth 3.78 |
 | Sub I f | the octave below at the level of the fundamental |
 | STOPS mode note buttons | SEL plays D4 (293.7 Hz) |

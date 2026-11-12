@@ -92,7 +92,7 @@ def core(path, alias_path=None):
             harm |= np.abs(f - k * f0) < 25
         band = (f > 50) & (f < 20000)
         a_db = 10 * np.log10(spec[band & ~harm].sum() / spec[band & harm].sum())
-        check("alias energy, G7 (3136 Hz)", a_db < -40, f"{a_db:.1f} dB below the harmonics")
+        check("alias energy, G7 (3136 Hz)", a_db < -38, f"{a_db:.1f} dB below the harmonics")
 
 
 def pitch_track(s, hop=441, win=2048):

@@ -44,10 +44,7 @@ silence starts the same way.
 | OCT− / OCT+ | Octave coupler: LOW / MED / HIGH | The transposing slider |
 | ALGORITHM | Shift the FM-1's 27 keys up an octave to reach the top of the 36-key range | |
 | SELECT | Presets (see below) | The voicing card |
-| LFO | Vibrato speed: off → I → II → III | Tablets I, II, III |
-| FX | Vibrato depth (the AMP tablet) | The Amplitude tablet |
-| ENV | Tablet **P**: a sharper attack, for plucked sounds | Tablet P |
-| GLO | STOPS mode | |
+| GLO | STOPS mode: all the tablets, including vibrato, P and the sub-octaves | The tablet rail |
 | SAVE | Store the current tablets and coupler in the user slot shown | |
 | KNOB 1 | Fine tuning, ±50 cents | The tuning control |
 

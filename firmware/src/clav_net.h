@@ -75,12 +75,12 @@ static int32_t sf_to_q(sf_t a, int32_t q)       /* a * 2^q as int32, saturated *
 #define ND_GND NET_N                            /* ground: an extra node held at 0 */
 enum { E_R5, E_C5, E_CS, E_C17, E_R29, E_R30, E_C28, E_R31, E_C29, E_R32, E_RIN, E_RPL5, E_RPA, E_RPB, E_RPC,
        E_SV, E_CSH, E_R28, E_CN1, E_GN1, E_CN3, E_C27, E_SB, E_COUT, NE };
-static const uint8_t NE_P[NE] = {ND_A, ND_A, ND_IN, ND_IN, ND_a, ND_NV, ND_IN, ND_IN, ND_b, ND_IN, ND_OUT, ND_OUT,
+static const uint8_t NE_P[NE] = {ND_IN, ND_A, ND_IN, ND_IN, ND_a, ND_NV, ND_IN, ND_IN, ND_b, ND_IN, ND_OUT, ND_OUT,
                                  ND_IN, ND_NB, ND_N3, ND_NV, ND_N1, ND_OUT, ND_N1, ND_N1, ND_N3, ND_NB, ND_NB, ND_OUT};
 static const uint8_t NE_Q[NE] = {ND_GND, ND_IN, ND_OUT, ND_a, ND_NV, ND_GND, ND_GND, ND_b, ND_GND, ND_GND, ND_GND,
                                  ND_N1, ND_NB, ND_N1, ND_GND, ND_GND, ND_GND, ND_N1, ND_GND, ND_GND, ND_GND, ND_GND,
                                  ND_GND, ND_GND};
-static const uint8_t NE_CAP[] = {E_C5, E_CS, E_C17, E_C28, E_C29, E_CSH, E_CN1, E_CN3, E_C27, E_COUT};
+static const uint8_t NE_CAP[] = {E_CS, E_C17, E_C28, E_C29, E_CSH, E_CN1, E_CN3, E_C27, E_COUT};
 #define NCAP (sizeof NE_CAP / sizeof NE_CAP[0])
 static const uint8_t NW_P[3] = {ND_IN, ND_NB, ND_GND}, NW_Q[3] = {ND_NB, ND_N1, ND_N3};   /* La, Lb, Lc */
 
@@ -96,7 +96,7 @@ enum { T_1, T_2, T_3, T_4, T_5, T_6, T_7, T_8, T_9, T_O, T_A, T_B, T_V, T_P, T_V
 #define NST (NCAP + 4u)
 typedef struct {
     int32_t k[NET_N][NST];                      /* row r = node rnode[r], column j = state sidx[j]; Q28 */
-    int32_t ku[NET_N];                          /* MOhm, Q28: the source at node A */
+    int32_t ku[NET_N];                          /* MOhm, Q28: the source, into IN */
     int32_t g[NE];                              /* uS, Q12 (0: not in circuit) */
     uint8_t sidx[NST], rnode[NET_N], nst, nrow;
     uint32_t tabs, half;                        /* half: the light mode, the network at 22.05 kHz */
@@ -109,9 +109,9 @@ static void net_compute(net_coef_t *c, uint32_t tabs, uint32_t lever, uint32_t h
     int32_t *g = c->g;
     uint32_t i, j, k, n = NET_N;
 #define S(t) ((tabs >> (t)) & 1u)
-    g[E_R5] = NG_R5; g[E_C5] = NG_C5;
+    g[E_R5] = NG_R5; g[E_C5] = 0;               /* C5: a high-pass on the source instead (clavioline.c) */
     g[E_CS] = NG_C30 + (int32_t)S(T_7) * NG_C24 + (int32_t)S(T_8) * NG_C25 + (int32_t)S(T_9) * NG_C26;
-    g[E_C17] = NG_C17; g[E_R29] = NG_R29; g[E_R30] = NG_R30; g[E_C28] = NG_C28; g[E_R31] = NG_R31; g[E_C29] = NG_C29;
+    g[E_C17] = S(T_V) ? NG_C17 : 0;             /* (left out while V is up: within 0.04 dB) */ g[E_R29] = NG_R29; g[E_R30] = NG_R30; g[E_C28] = NG_C28; g[E_R31] = NG_R31; g[E_C29] = NG_C29;
     g[E_R32] = NET_G_R32[lever > LEVER_MAX ? LEVER_MAX : lever];
     g[E_RIN] = NG_RIN; g[E_RPL5] = NG_RP_L5; g[E_RPA] = NG_RPA; g[E_RPB] = NG_RPB; g[E_RPC] = NG_RPC;
     g[E_SV] = S(T_V) ? NG_SHORT : 0;
@@ -192,7 +192,7 @@ static void net_compute(net_coef_t *c, uint32_t tabs, uint32_t lever, uint32_t h
                 }
                 c->k[r][j] = sf_to_q(d, 28);
             }
-            c->ku[r] = sf_to_q(GI(i, ND_A), 28);
+            c->ku[r] = sf_to_q(GI(i, ND_IN), 28);
         }
     }
 #undef GI
