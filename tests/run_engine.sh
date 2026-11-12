@@ -15,4 +15,5 @@ ${PYTHON:-python3} tests/check_engine.py core build/host/core.wav build/host/ali
 ${PYTHON:-python3} tests/check_engine.py stage4 build/host/stage4.wav || fail=1
 NT=build/host/net_test; [ -f "$NT.exe" ] && NT="$NT.exe"
 ${PYTHON:-python3} tests/net_check.py "$NT" || fail=1
+NET_HALF=1 ${PYTHON:-python3} tests/net_check.py "$NT" || fail=1   # the rate the FM-1 runs
 exit $fail

@@ -47,7 +47,7 @@ silence starts the same way.
 | LFO | Vibrato speed: off → I → II → III | Tablets I, II, III |
 | FX | Vibrato depth (the AMP tablet) | The Amplitude tablet |
 | ENV | Tablet **P**: a sharper attack, for plucked sounds | Tablet P |
-| EDIT | STOPS mode | |
+| GLO | STOPS mode | |
 | SAVE | Store the current tablets and coupler in the user slot shown | |
 | KNOB 1 | Fine tuning, ±50 cents | The tuning control |
 
@@ -56,14 +56,19 @@ knee lever up and back down for each note. Bowed swells are a slow push and rele
 
 ### STOPS mode: the tablets
 
-Press **EDIT** and the keyboard becomes the row of tablets. Each key turns one on or off, and its LED shows which are
-down. **PLAY** holds the last note as a drone so you hear each change. **EDIT** or **HOME** goes back to playing; nothing
-is lost. The bottom line shows the audio engine's CPU load.
+Press **GLO** and the keyboard becomes the row of tablets. Each key turns one on or off, and its LED shows which are
+down. **GLO** or **HOME** goes back to playing; nothing is lost.
+
+To hear the tablets while you set them:
+- **FX, SEL, ENV, LFO, EDIT** play **C4, D4, E4, F4, G4** for as long as you hold them; their lights glow in STOPS mode.
+- **PLAY** holds the last note as a drone.
+
+The bottom line shows the audio engine's CPU load.
 
 ```
- black keys:    F#3  G#3         C#4  D#4          F#4  G#4  A#4    C#5
-                Sub  Sub         Sub  Sub          vib  vib  vib    vibrato
-                I p  II p        I f  II f          I   II   III    depth
+ black keys:    F#3  G#3  A#3   C#4                         A#4   C#5   D#5   F#5
+                vib  vib  vib   vibrato                     Sub   Sub   Sub   Sub
+                III  II   I     depth (+)                   I p   II p  I f   II f
  white keys: F3  G3  A3  B3  C4  D4  E4  F4  G4  A4  B4  C5  D5  E5  F5
               1   2   3   4   5   6   7   8   9   O   A   B   V   P   (all off)
 ```

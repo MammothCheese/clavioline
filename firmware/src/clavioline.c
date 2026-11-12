@@ -12,12 +12,12 @@
  *   SELECT      presets: the 1952 Table 1, the Selmer voicings quoted by Sound On Sound, 4 user slots
  *   SAVE        store the tablets and the coupler in the user slot shown
  *   LFO         vibrato speed: off, I (4.5 Hz), II (5.5), III (6.5)      FX   vibrato amplitude (the AMP tablet)
- *   ENV         tablet P (the short attack)                              EDIT STOPS mode
+ *   ENV         tablet P (the short attack)                              GLO  STOPS mode
  *   KNOB 1      fine tune +-50 cents (VR6)
- * STOPS mode (EDIT or HOME back; nothing is lost)
+ * STOPS mode (GLO or HOME back; nothing is lost)
  *   white keys  F3..E5: tablets 1 2 3 4 5 6 7 8 9 O A B V P;  F5: all tone tablets off
- *   black keys  F#3 G#3: Sub I p, Sub II p;  C#4 D#4: Sub I f, Sub II f (Concert);  F#4 G#4 A#4: vibrato I II III;
- *               C#5: AMP
+ *   black keys  F#3 G#3 A#3: vibrato III II I;  C#4: AMP;  A#4 C#5 D#5 F#5: Sub I p, Sub II p, Sub I f, Sub II f
+ *   FX SEL ENV LFO EDIT   play C4 D4 E4 F4 G4 while held, to try the tablets
  *   PLAY        holds the last note as a drone while you change tablets; MIDI notes play as usual
  *
  * The sound: trapezoid oscillator (+ Concert sub-octave dividers) -> V2 gate (printed cathode network) -> the
@@ -68,7 +68,7 @@ static net_state_t net_st;
 
 static struct {
     uint32_t ph, held, pend_on, pend_off, lfo, sub;
-    int32_t run, stopping, gate, fade, carry, dcx, dcy, xfade, xdir, g, gstep, hx, hy;
+    int32_t run, stopping, gate, fade, carry, dcx, dcy, xfade, xdir, g, gstep, hy, xh[7], yh[4];
     int32_t x[3];                               /* V2 cathode network, Q30: 1 = cut off, 0 = conducting */
 } au = {.x = {1 << 30, 1 << 30, 1 << 30}, .xfade = 32767};
 
@@ -219,13 +219,19 @@ static void app_audio(int32_t *out, uint32_t n)
         v = (int32_t)(((int64_t)v * am) >> 15);
         if (!nc->half) {
             y = net_step(&net_st, nc, v * NET_ISRC_MUL);   /* the tone-forming network, knee lever inside */
-        } else if (!(i & 1u)) {                 /* light mode: the network every other sample, interpolated */
-            au.hx = v * NET_ISRC_MUL;
-            y = au.hy;
-        } else {
-            int32_t yn = net_step(&net_st, nc, (int32_t)(((int64_t)au.hx + (int64_t)v * NET_ISRC_MUL) >> 1));
-            y = (int32_t)(((int64_t)au.hy + yn) >> 1);
-            au.hy = yn;
+        } else {                                /* light mode: the network at 22.05 kHz between half-band filters */
+            int32_t *xh = au.xh, *yh = au.yh;
+            xh[0] = xh[1]; xh[1] = xh[2]; xh[2] = xh[3]; xh[3] = xh[4]; xh[4] = xh[5]; xh[5] = xh[6];
+            xh[6] = v * NET_ISRC_MUL;
+            if (!(i & 1u)) {
+                y = au.hy;                      /* (the network sample before the midpoint below) */
+            } else {
+                int64_t d = ((int64_t)xh[3] * 16 + ((int64_t)xh[2] + xh[4]) * 9 - ((int64_t)xh[0] + xh[6])) >> 5;
+                yh[0] = yh[1]; yh[1] = yh[2]; yh[2] = yh[3];
+                yh[3] = net_step(&net_st, nc, (int32_t)d);   /* down: [-1 0 9 16 9 0 -1] / 32 */
+                y = (int32_t)((((int64_t)yh[1] + yh[2]) * 9 - ((int64_t)yh[0] + yh[3])) >> 4);   /* up: the midpoint */
+                au.hy = yh[2];
+            }
         }
         y = (int32_t)(((int64_t)y * NET_OUT_MUL) >> 16);
         if (au.xdir) {                          /* tablet change: 2.9 ms out, 2.9 ms in */
@@ -330,58 +336,113 @@ static void apply_preset(uint32_t i)
     edited = 0;
 }
 
-/* ---- the screen --------------------------------------------------------------------------------------- */
-#define C_CREAM RGB(232, 222, 190)
-#define C_INK RGB(40, 30, 20)
-#define C_AMBER RGB(255, 166, 40)
-#define C_WOOD RGB(52, 32, 20)
-#define C_GREY RGB(96, 96, 96)
-#define C_VIB RGB(170, 182, 196)
-#define C_SUB RGB(196, 176, 150)
+/* ---- the screen: 1950s space age (deep-space navy, ivory tablets, a satellite, teal and orange lamps) ------ */
+#define C_NAVY RGB(8, 16, 38)
+#define C_PANEL RGB(18, 40, 62)
+#define C_CHROME RGB(150, 172, 190)
+#define C_IVORY RGB(238, 230, 206)
+#define C_INK RGB(28, 24, 22)
+#define C_ORANGE RGB(255, 142, 36)
+#define C_TEAL RGB(56, 196, 186)
+#define C_MINT RGB(160, 244, 222)
+#define C_FAINT RGB(58, 80, 104)
+#define C_RED RGB(214, 64, 52)
+#define C_VIOLET RGB(150, 120, 210)
+#define C_STAR RGB(206, 216, 255)
+#define C_AMBER C_ORANGE
 
-static void draw_title(uint32_t stops)
+static void cv_disc(int32_t cx, int32_t cy, int32_t r, uint16_t c)   /* a filled circle */
 {
-    draw_text_box(0, 4, 240, &FONT_L, stops ? "STOPS" : "CLAVIOLINE", stops ? C_AMBER : C_CREAM, 1);
+    int32_t dy;
+    for (dy = -r; dy <= r; dy++) {
+        int32_t dx = 0;
+        while ((dx + 1) * (dx + 1) + dy * dy <= r * r) dx++;
+        cv_rect(cx - dx, cy + dy, 2 * dx + 1, 1, c);
+    }
 }
 
-static void draw_rail(void)                     /* the front rail: a pressed tablet sits lower, lit */
+static void cv_tablet(int32_t x, int32_t y, int32_t w, int32_t h, uint16_t band, int32_t on, const char *lab,
+                      uint16_t bg)          /* an ivory tablet with a coloured band; pressed: lower, glowing orange */
+{
+    if (on) { y += 3; cv_rect(x - 1, y - 1, w + 2, h + 2, C_ORANGE); }
+    cv_rect(x, y, w, h, on ? C_ORANGE : C_IVORY);
+    cv_rect(x, y, w, 4, on ? C_IVORY : band);
+    cv_pset(x, y, bg); cv_pset(x + w - 1, y, bg); cv_pset(x, y + h - 1, bg); cv_pset(x + w - 1, y + h - 1, bg);
+    cv_text(x + (w - text_w(&FONT_S, lab)) / 2, y + (h - 16) / 2 + 2, &FONT_S, lab, C_INK);
+}
+
+static void draw_title(uint32_t stops)          /* stars, the title, a satellite with its antennae, an orbit line */
+{
+    static const uint8_t STARS[][2] = {{6, 6}, {30, 30}, {52, 4}, {74, 33}, {98, 2}, {121, 35}, {145, 5}, {168, 31},
+                                       {190, 3}, {212, 28}, {234, 9}, {14, 22}, {226, 34}, {110, 18}};
+    const char *t = stops ? "STOPS" : "CLAVIOLINE";
+    int32_t i, tw = text_w(&FONT_L, t), x = (240 - tw) / 2 + 10;
+    cv_begin(240, 40, C_NAVY);
+    for (i = 0; i < (int32_t)(sizeof STARS / sizeof STARS[0]); i++) {
+        cv_pset(STARS[i][0], STARS[i][1], C_STAR);
+        if (i % 3 == 0) { cv_pset(STARS[i][0] - 1, STARS[i][1], C_FAINT); cv_pset(STARS[i][0] + 1, STARS[i][1], C_FAINT); }
+    }
+    {                                           /* the satellite: a sphere with a band and four antennae */
+        int32_t sx = x - 17, sy = 18;
+        cv_line(sx - 9, sy - 9, sx + 9, sy + 9, C_CHROME);
+        cv_line(sx - 9, sy + 9, sx + 9, sy - 9, C_CHROME);
+        cv_disc(sx, sy, 6, C_CHROME);
+        cv_rect(sx - 6, sy - 1, 13, 2, C_TEAL);
+        cv_pset(sx - 2, sy - 3, C_IVORY);
+    }
+    cv_text(x, 3, &FONT_L, t, stops ? C_ORANGE : C_IVORY);
+    cv_line(x, 37, x + tw, 37, C_TEAL);
+    cv_rect(x + tw + 3, 36, 3, 3, C_ORANGE);
+    cv_blit(0, 0);
+}
+
+static void draw_rail(void)                     /* the tablets, in two rows, on a panel with chrome edges */
 {
     static const char *const L1[14] = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "O", "A", "B", "V", "P"};
-    static const char *const L2[8] = {"I", "II", "III", "+", "Ip", "IIp", "If", "IIf"};
-    static const uint8_t B2[8] = {T_VIB1, T_VIB2, T_VIB3, T_AMP, T_SUB1P, T_SUB2P, T_SUB1F, T_SUB2F};
+    static const char *const L2[8] = {"III", "II", "I", "+", "Ip", "IIp", "If", "IIf"};   /* in the black-key order */
+    static const uint8_t B2[8] = {T_VIB3, T_VIB2, T_VIB1, T_AMP, T_SUB1P, T_SUB2P, T_SUB1F, T_SUB2F};
     uint32_t i, tabs = set.tabs;
-    cv_begin(240, 40, C_WOOD);
-    for (i = 0; i < 14u; i++) {
-        int32_t x = 8 + (int32_t)i * 16, on = (int32_t)(tabs >> i & 1u), y = on ? 7 : 2;
-        cv_rect(x, y, 15, 31, on ? C_AMBER : C_CREAM);
-        cv_text(x + (15 - text_w(&FONT_S, L1[i])) / 2, y + 8, &FONT_S, L1[i], C_INK);
-    }
+    cv_begin(240, 40, C_NAVY);
+    cv_rect(2, 1, 236, 39, C_PANEL);
+    cv_rect(2, 0, 236, 1, C_CHROME);
+    for (i = 0; i < 14u; i++)
+        cv_tablet(8 + (int32_t)i * 16, 4, 14, 28, i == 13u ? C_ORANGE : C_RED, (int32_t)(tabs >> i & 1u), L1[i], C_PANEL);
     cv_blit(0, 40);
-    cv_begin(240, 32, C_WOOD);
-    for (i = 0; i < 8u; i++) {
-        int32_t x = (i < 4u ? 8 : 16) + (int32_t)i * 27, on = (int32_t)(tabs >> B2[i] & 1u), y = on ? 6 : 2;
-        cv_rect(x, y, 26, 24, on ? C_AMBER : i < 4u ? C_VIB : C_SUB);
-        cv_text(x + (26 - text_w(&FONT_S, L2[i])) / 2, y + 4, &FONT_S, L2[i], C_INK);
-    }
+    cv_begin(240, 32, C_NAVY);
+    cv_rect(2, 0, 236, 30, C_PANEL);
+    cv_rect(2, 30, 236, 1, C_CHROME);
+    for (i = 0; i < 8u; i++)
+        cv_tablet((i < 4u ? 6 : 14) + (int32_t)i * 27, 1, 26, 22, i < 4u ? C_TEAL : C_VIOLET,
+                  (int32_t)(tabs >> B2[i] & 1u), L2[i], C_PANEL);
     cv_blit(0, 80);
 }
 
-static void draw_preset(void)
+static void draw_preset(void)                   /* the preset in a capsule */
 {
     char s[24];
     const char *p = set.preset < NFACT ? PRESET[set.preset].name : "USER";
     uint32_t i = 0;
+    int32_t w;
     while (*p && i < 18u) s[i++] = *p++;
     if (set.preset >= NFACT) { s[i++] = ' '; s[i++] = (char)('1' + set.preset - NFACT); }
     if (edited) s[i++] = '*';
     s[i] = 0;
-    draw_text_box(0, 116, 240, &FONT_S, s, C_CREAM, 1);
+    w = text_w(&FONT_S, s) + 12;
+    cv_begin(240, 26, C_NAVY);
+    cv_disc(120 - w / 2, 13, 10, C_PANEL);
+    cv_disc(120 + w / 2, 13, 10, C_PANEL);
+    cv_rect(120 - w / 2, 3, w, 21, C_PANEL);
+    cv_disc(120 - w / 2 - 16, 13, 2, C_TEAL);
+    cv_disc(120 + w / 2 + 16, 13, 2, C_TEAL);
+    cv_text(120 - (w - 12) / 2, 5, &FONT_S, s, C_IVORY);
+    cv_blit(0, 112);
 }
 
-static void draw_note(void)
+static void draw_note(void)                     /* the note, between two orbit marks */
 {
     static const char *const NAME[12] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
     char s[8] = "-";
+    int32_t w;
     if (top >= 0) {
         int32_t p = top + 12 * set.coupler, i = 0;
         const char *q;
@@ -390,27 +451,40 @@ static void draw_note(void)
         if (p >= 12) s[i++] = (char)('0' + p / 12 - 1);
         s[i] = 0;
     }
-    draw_text_box(0, 136, 240, &FONT_L, s, C_WHITE, 1);
+    w = text_w(&FONT_L, s);
+    cv_begin(240, 34, C_NAVY);
+    cv_line(40, 17, 120 - w / 2 - 12, 17, C_FAINT);
+    cv_line(120 + w / 2 + 12, 17, 200, 17, C_FAINT);
+    cv_disc(120 - w / 2 - 12, 17, 2, C_TEAL);
+    cv_disc(120 + w / 2 + 12, 17, 2, C_TEAL);
+    cv_text(120 - w / 2, 1, &FONT_L, s, C_MINT);
+    cv_blit(0, 138);
 }
 
-static void draw_coupler(void)
+static void draw_coupler(void)                  /* three lamps */
 {
     static const char *const W[3] = {"LOW", "MED", "HIGH"};
     uint32_t i;
-    cv_begin(240, 20, C_BLACK);
-    for (i = 0; i < 3u; i++)
-        cv_text(28 + (int32_t)i * 70, 2, &FONT_S, W[i], (int32_t)i - 1 == set.coupler ? C_AMBER : C_GREY);
+    cv_begin(240, 22, C_NAVY);
+    for (i = 0; i < 3u; i++) {
+        int32_t x = 22 + (int32_t)i * 74, on = (int32_t)i - 1 == set.coupler;
+        cv_disc(x, 11, 6, on ? C_ORANGE : C_PANEL);
+        if (on) { cv_pset(x - 2, 9, C_IVORY); cv_pset(x - 1, 8, C_IVORY); }
+        cv_text(x + 11, 3, &FONT_S, W[i], on ? C_IVORY : C_FAINT);
+    }
     cv_blit(0, 172);
 }
 
-static void draw_lever(void)
+static void draw_lever(void)                    /* the knee lever: a row of lamps, teal, mint, orange */
 {
-    int32_t w = (int32_t)(lever * 160u / LEVER_MAX);
-    cv_begin(240, 22, C_BLACK);
-    cv_text(8, 3, &FONT_S, "KNEE", C_CREAM);
-    cv_rect(64, 3, 164, 16, C_GREY);
-    cv_rect(66, 5, 160, 12, C_BLACK);
-    if (w) cv_rect(66, 5, w, 12, C_AMBER);
+    int32_t i, lit = (int32_t)((lever * 20u + LEVER_MAX - 1u) / LEVER_MAX);
+    cv_begin(240, 24, C_NAVY);
+    cv_text(6, 4, &FONT_S, "KNEE", C_IVORY);
+    for (i = 0; i < 20; i++) {
+        uint16_t c = C_PANEL;
+        if (i < lit) c = i < 12 ? C_TEAL : i < 16 ? C_MINT : C_ORANGE;   /* like a period level meter */
+        cv_rect(52 + i * 9, 6, 7, 12, c);
+    }
     cv_blit(0, 194);
 }
 
@@ -418,13 +492,20 @@ static void draw_status(const char *msg, uint16_t colour)
 {
     char s[32] = "KEYS F3-G5  TUNE +00";
     int32_t t = set.tune < 0 ? -set.tune : set.tune;
-    if (msg) { draw_text_box(0, 220, 240, &FONT_S, msg, colour, 1); return; }
-    s[6] = (char)('3' + set.window);
-    s[9] = (char)('5' + set.window);
-    s[17] = set.tune < 0 ? '-' : '+';
-    s[18] = (char)('0' + t / 10);
-    s[19] = (char)('0' + t % 10);
-    draw_text_box(0, 220, 240, &FONT_S, s, C_GREY, 1);
+    const char *p = msg;
+    if (!p) {
+        s[6] = (char)('3' + set.window);
+        s[9] = (char)('5' + set.window);
+        s[17] = set.tune < 0 ? '-' : '+';
+        s[18] = (char)('0' + t / 10);
+        s[19] = (char)('0' + t % 10);
+        p = s;
+        colour = C_CHROME;
+    }
+    cv_begin(240, 22, C_NAVY);
+    cv_rect(20, 0, 200, 1, C_PANEL);
+    cv_text((240 - text_w(&FONT_S, p)) / 2, 4, &FONT_S, p, colour);
+    cv_blit(0, 218);
 }
 
 static char *put_pct(char *p, uint32_t pm)      /* per mille -> "nn%" */
@@ -461,17 +542,20 @@ static void app_idle(void)
 
 /* ---- STOPS mode: the keys as tablets ----------------------------------------------------------------- */
 static const int8_t KEY_TAB[27] = {             /* key (0 = F3) -> tablet, -1 none, -2 all tone tablets off */
-    T_1, T_SUB1P, T_2, T_SUB2P, T_3, -1, T_4, T_5, T_SUB1F, T_6, T_SUB2F, T_7, T_8, T_VIB1, T_9, T_VIB2, T_O,
-    T_VIB3, T_A, T_B, T_AMP, T_V, -1, T_P, -2, -1, -1};
+    T_1, T_VIB3, T_2, T_VIB2, T_3, T_VIB1, T_4, T_5, T_AMP, T_6, -1, T_7, T_8, -1, T_9, -1, T_O,
+    T_SUB1P, T_A, T_B, T_SUB2P, T_V, T_SUB1F, T_P, -2, T_SUB2F, -1};
+
+static const uint8_t TEST_BTN[5] = {BTN_FX, BTN_SEL, BTN_ENV, BTN_LFO, BTN_EDIT};   /* STOPS: notes to try */
+static const uint8_t TEST_NOTE[5] = {60, 62, 64, 65, 67};                            /* C4 D4 E4 F4 G4 */
 
 static void app_main(void)
 {
     uint32_t prev = 0, k, t_change = 0, dirty = 0, t_lever = 0, stops = 0, drone = 0, drone_note = 0;
-    uint32_t net_tabs = ~0u, net_lever = ~0u, t_msg = 0, t_cpu = 0, cpu_over = 0, hot = 0, net_light;
-#ifdef CLAV_FORCE_LIGHT
-    uint32_t light = 1;
+    uint32_t net_tabs = ~0u, net_lever = ~0u, t_msg = 0, t_cpu = 0, cpu_over = 0, net_light, tnotes = 0;
+#ifdef CLAV_FULL_RATE
+    uint32_t light = 0;                         /* the network at 44.1 kHz: more than the FM-1 has time for */
 #else
-    uint32_t light = 0;                         /* the light mode: the network at half rate, when the CPU runs short */
+    uint32_t light = 1;                         /* the network at 22.05 kHz, as the FM-1 runs it (docs/ENGINE.md) */
 #endif
     char cpu_txt[40] = "CPU";
     uint32_t drawn_note = ~0u, drawn_lever = ~0u, drawn_cpl = ~0u, drawn_st = ~0u, drawn_tabs = ~0u, drawn_pre = ~0u;
@@ -494,7 +578,7 @@ static void app_main(void)
     net_light = light;
     a_tabs = set.tabs;
 
-    lcd_fill(0, 0, 240, 240, C_BLACK);
+    lcd_fill(0, 0, 240, 240, C_NAVY);
     msg = "BUILD " APP_BUILD;                   /* which firmware this is, for the first seconds */
     t_msg = fm1_ms;
 
@@ -522,14 +606,26 @@ static void app_main(void)
         }
 
         b = fm1_input_edges(&rel);
-        if (b & (1u << BTN_EDIT) || (stops && b & (1u << BTN_HOME))) {   /* PLAY <-> STOPS */
+        if (stops) {                            /* FX SEL ENV LFO EDIT play C4 D4 E4 F4 G4, to try the tablets */
+            for (k = 0; k < 5u; k++) {
+                if (rel >> TEST_BTN[k] & 1u && tnotes >> k & 1u) { note_del(TEST_NOTE[k]); tnotes &= ~(1u << k); changed = 1; }
+                if (b >> TEST_BTN[k] & 1u && !(tnotes >> k & 1u)) { note_add(TEST_NOTE[k]); tnotes |= 1u << k; changed = 1; }
+            }
+            b &= ~(1u << BTN_FX | 1u << BTN_SEL | 1u << BTN_ENV | 1u << BTN_LFO | 1u << BTN_EDIT);
+        }
+        if (b & (1u << BTN_GLO) || (stops && b & (1u << BTN_HOME))) {   /* PLAY <-> STOPS */
             uint32_t was = stops;
-            stops = b & (1u << BTN_EDIT) ? !stops : 0;
+            stops = b & (1u << BTN_GLO) ? !stops : 0;
             if (stops && !was)                  /* the keys held now stop sounding: they become tablets */
                 for (k = 0; k < 27u; k++)
                     if (kon >> k & 1u) { note_del(key_note[k]); midi_send(0x80u, key_note[k], 0); }
             if (stops) kon = 0;
             if (!stops && drone) { note_del(drone_note); drone = 0; }
+            if (!stops) {                       /* the test notes end with STOPS mode */
+                for (k = 0; k < 5u; k++)
+                    if (tnotes >> k & 1u) note_del(TEST_NOTE[k]);
+                tnotes = 0;
+            }
             changed = 1;
         }
         if (stops && b & (1u << BTN_PLAY)) {    /* the drone: hold the last note while editing */
@@ -603,10 +699,20 @@ static void app_main(void)
                 fm1_led_key(KEY_LED(k), top >= 0 && (uint32_t)top == base + k);
         fm1_led_key(BTN_OCT_DOWN, set.coupler < 0);
         fm1_led_key(BTN_OCT_UP, set.coupler > 0);
-        fm1_led_key(BTN_ENV, set.tabs >> T_P & 1u);
-        fm1_led_key(BTN_FX, set.tabs >> T_AMP & 1u);
-        fm1_led_key(BTN_LFO, (set.tabs & (TB(T_VIB1) | TB(T_VIB2) | TB(T_VIB3))) != 0);
-        fm1_led_key(BTN_EDIT, stops);
+        if (stops) {                            /* the five note buttons glow, and light while held */
+            for (k = 0; k < 5u; k++) {
+                if (tnotes >> k & 1u) fm1_led_key(TEST_BTN[k], 1);
+                else { fm1_led_key(TEST_BTN[k], 0); fm1_led_key_glow(TEST_BTN[k], 1); }
+            }
+        } else {
+            for (k = 0; k < 5u; k++) fm1_led_key_glow(TEST_BTN[k], 0);
+            fm1_led_key(BTN_SEL, 0);
+            fm1_led_key(BTN_EDIT, 0);
+            fm1_led_key(BTN_ENV, set.tabs >> T_P & 1u);
+            fm1_led_key(BTN_FX, set.tabs >> T_AMP & 1u);
+            fm1_led_key(BTN_LFO, (set.tabs & (TB(T_VIB1) | TB(T_VIB2) | TB(T_VIB3))) != 0);
+        }
+        fm1_led_key(BTN_GLO, stops);
         fm1_led_key(BTN_PLAY, drone);
 
         if (msg && fm1_ms - t_msg > 1500u) { msg = 0; drawn_st = ~0u; }
@@ -617,10 +723,7 @@ static void app_main(void)
             a_load_peak = 0;
             t_cpu = fm1_ms;
             cpu_over = pk > 900u;
-            hot = pk > 750u ? hot + 1u : 0u;    /* two hot seconds in a row: the light mode, until power-off */
-            if (hot >= 2u && !light) { light = 1; msg = "LIGHT MODE: NETWORK AT 22 KHZ"; t_msg = fm1_ms; }
             if (cpu_over) w = "AUDIO OVERLOAD ";
-            else if (light) w = "LIGHT CPU ";
             while (*w) *q++ = *w++;
             q = put_pct(q, a_load);
             w = "  PEAK ";
@@ -640,10 +743,10 @@ static void app_main(void)
         if (lever != drawn_lever) { drawn_lever = lever; draw_lever(); }
         if (msg && drawn_st != 0xFFFFFFFEu) { drawn_st = 0xFFFFFFFEu; draw_status(msg, C_AMBER); }
         else if (!msg && (stops || cpu_over)) {
-            if (drawn_st != 0xFFFFFFFDu) { drawn_st = 0xFFFFFFFDu; draw_status(cpu_txt, cpu_over ? C_AMBER : C_GREY); }
+            if (drawn_st != 0xFFFFFFFDu) { drawn_st = 0xFFFFFFFDu; draw_status(cpu_txt, cpu_over ? C_AMBER : C_CHROME); }
         } else if (!msg && ((uint32_t)set.window | (uint32_t)(set.tune + 50) << 1) != drawn_st) {
             drawn_st = (uint32_t)set.window | (uint32_t)(set.tune + 50) << 1;
-            draw_status(0, C_GREY);
+            draw_status(0, C_CHROME);
         }
         idle_ok = 0;
 

@@ -122,7 +122,9 @@ def stage4(path):
     r, d = vib(x, 8700, 10800)
     check("vibrato III + AMP: deeper", 3.0 < d / depth[2] < 4.6,
           f"+-{d:.1f} cents, {d / depth[2]:.2f}x the shallow one (want ~3.8)")
-    s = seg(x, 12300, 13400)
+    f = f0_acf(seg(x, 12000, 12500), 150, 400)
+    check("STOPS mode: SEL plays D4", abs(cents(f, 293.66)) < 3, f"{f:.2f} Hz (want 293.66)")
+    s = seg(x, 13400, 14500)
     n = len(s)
     spec = np.abs(np.fft.rfft((s - s.mean()) * np.hanning(n)))
     f = np.fft.rfftfreq(n, 1 / FS)

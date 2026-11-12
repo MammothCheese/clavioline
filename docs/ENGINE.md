@@ -29,28 +29,32 @@ The network is simulated element for element. The netlist is in [HISTORY.md](HIS
   - The four coupled windings use their inductance matrix.
   - Coil losses are a series copper resistance and a parallel core-loss resistance.
 - **Per sample:** the network is solved in DK form, `v = KC·xc + KL·hl + KU·i`, with capacitor voltages and coil currents as the states.
-  - That is 9 node voltages × 15 multiply-accumulates, all in 32-bit integers with 64-bit sums.
+  - That is at most 8 node voltages × 15 multiply-accumulates, all in 32-bit integers with 64-bit sums, 22,050 times a second.
 - **When the gains change:** the gains (KC, KL, KU) depend on the tablets and the knee lever. When either changes, the main loop:
   - rebuilds the conductance matrix exactly in integers;
   - inverts it in a small software floating point (the chip has no FPU);
   - hands the new gains to the audio interrupt.
 - **Tablet changes** fade out and in over 3 ms each way.
 
-### CPU load and the light mode
+### The network rate, and the CPU load
 
-The audio interrupt times itself against the 5.8 ms it has for each 256-sample block.
+The network runs at **22.05 kHz**, half the audio rate. At 44.1 kHz it needs more time than the FM-1 has: a render
+that overruns its 5.8 ms makes the FM-1 replay the previous block, which sounds like a harsh buzz.
 
-- **STOPS mode** shows the load on the bottom line, as `CPU nn%  PEAK nn%`.
-- **Running short:** if the peak passes 90 %, PLAY mode shows `AUDIO OVERLOAD` instead of the usual line. A late render
-  makes the FM-1 replay the previous block, which sounds like a harsh buzz.
-- **Light mode:** after two seconds above 75 %, the firmware switches the network to **light mode** until power-off,
-  and STOPS mode then shows `LIGHT CPU`. In light mode the network runs at 22.05 kHz:
-  - its input is averaged over pairs of samples and its output interpolated;
-  - its coil constants are recomputed for that rate, and it still matches the exact analysis within 0.14 dB up to 9 kHz;
-  - against full rate, harmonics below 8 kHz change by 1–2 dB on most presets, and up to 7 dB on the brightest
-    (Harpsichord, Mandolin, Musical Saw).
+- **Around the network:** a 7-tap half-band filter `[-1 0 9 16 9 0 -1] / 32` takes the source down to 22.05 kHz, and a
+  4-point half-band interpolator `[-1 9 9 -1] / 16` brings the output back up.
+- **Coil constants:** they are computed for 22.05 kHz, and the network still matches the exact analysis within
+  **0.14 dB** up to 9 kHz.
+- **Against a 44.1 kHz network:** harmonics below 8 kHz differ by 0.7 dB on a typical preset, and by up to 6.5 dB on
+  the brightest (Harpsichord).
+- **Aliasing:** on the highest note (3136 Hz) it sits 41.8 dB below the harmonics.
+- **Full rate:** building with `-DCLAV_FULL_RATE` runs the network at 44.1 kHz, for the PC or for faster hardware.
 
-Other savings that keep the full-rate sound unchanged:
+The interrupt times itself against its 5.8 ms:
+- STOPS mode shows the load on the bottom line, as `CPU nn%  PEAK nn%`;
+- if the peak passes 90 %, PLAY mode shows `AUDIO OVERLOAD` instead.
+
+Other savings:
 - only the states in circuit and the nodes something reads are computed;
 - every multiply is 32 × 32 → 64;
 - the control valve's cathode network steps every 8 samples (with its exact 8-step matrix), and its gain glides in between.
@@ -116,10 +120,11 @@ them:
 | Legato note change | no new attack (0.6 dB level change) |
 | Attack to −40 / −20 / −3 dB | 12 / 26 / 62 ms; with P 2 / 4 / 6 ms |
 | Knee lever from step 48 to 8 | −38 dB |
-| Aliasing on a 3136 Hz note | −56.5 dB below the harmonics |
+| Aliasing on a 3136 Hz note | −41.8 dB below the harmonics |
 | Vibrato I / II / III | 4.49 / 5.52 / 6.49 Hz; deep / shallow depth 3.78 |
 | Sub I f | the octave below at the level of the fundamental |
-| Chip network against the exact analysis | within 0.31 dB |
+| STOPS mode note buttons | SEL plays D4 (293.7 Hz) |
+| Chip network against the exact analysis | within 0.14 dB at 22.05 kHz (0.31 dB at 44.1 kHz) |
 
 `tests/run_tests.sh` adds the platform's update-path tests (the installer, the update loader) after a firmware build.
 
