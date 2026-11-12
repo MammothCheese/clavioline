@@ -63,6 +63,14 @@ SCREEN_NAME = "DINGHY"              # the update loader's screen (FM-1, ldr_scre
 SCREEN_COLOUR = 0xB47F              # lilac, #B48CFF
 PRODUCT = "FM-1_950"                # Clavioline: 95N (check the FM-1 hub that 95N is still free before a release)
 VERSION = None                      # APP_VER for release builds
+def _build_id():                    # shown on the screen at power-on: the commit this firmware was built from
+    import subprocess
+    try:
+        r = subprocess.run(["git", "rev-parse", "--short=7", "HEAD"], capture_output=True, text=True, timeout=10)
+        return r.stdout.strip() or "local"
+    except Exception:
+        return "local"
+BUILD_ID = _build_id()
 
 
 def toolchain():
@@ -167,7 +175,7 @@ def build_loader():
 
 def build_app():
     flags = [*CFLAGS, *BOARD_DEFS[BOARD], "-Ifirmware/hal", "-Ifirmware/src", "-Ifirmware/gen", f'-DFELUCCA_ID="{PRODUCT}"',
-             f'-DAPP_VER="{VERSION or "0.0"}"']
+             f'-DAPP_VER="{VERSION or "0.0"}"', f'-DAPP_BUILD="{BUILD_ID}"']
     if BOARD == "smk37":
         if not re.fullmatch(r"[A-Z0-9]{1,7}", DATA_FAMILY):
             raise SystemExit("DATA_FAMILY: 1..7 of A-Z 0-9")

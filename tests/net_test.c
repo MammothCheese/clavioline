@@ -25,19 +25,10 @@ int main(int argc, char **argv)
     lever = (uint32_t)atoi(argv[2]);
     n = (uint32_t)atoi(argv[3]);
     imp = argc > 4 ? atoi(argv[4]) : 65536000;  /* 1 mA */
-    net_compute(&c, tabs, lever);
+    net_compute(&c, tabs, lever, getenv("NET_HALF") != 0);
     net_adopt(&s, &c);
-    if (getenv("NET_K")) {                      /* KC, KL, KU as numbers */
-        uint32_t j;
-        for (i = 0; i < NET_N; i++) {
-            for (j = 0; j < NCAP; j++) fprintf(stderr, "%.9g ", c.kc[i][j] / 268435456.0);
-            for (j = 0; j < 4; j++) fprintf(stderr, "%.9g ", c.kl[i][j] / 268435456.0);
-            fprintf(stderr, "%.9g%c", c.ku[i] / 268435456.0, 10);
-        }
-        return 0;
-    }
     if (getenv("NET_DUMP")) {                   /* the source to each node, MOhm */
-        for (i = 0; i < NET_N; i++) fprintf(stderr, "%g ", c.ku[i] / 268435456.0);
+        for (i = 0; i < NET_N; i++) fprintf(stderr, "%g ", c.ku[i < c.nrow ? i : 0] / 268435456.0);
         fprintf(stderr, "\n");
     }
     {
@@ -50,8 +41,10 @@ int main(int argc, char **argv)
             if (getenv("NET_MAX")) {
                 static int32_t mx[3];
                 uint32_t j;
-                for (j = 0; j < NCAP; j++) if ((s.xc[j] < 0 ? -s.xc[j] : s.xc[j]) > mx[0]) mx[0] = s.xc[j] < 0 ? -s.xc[j] : s.xc[j];
-                for (j = 0; j < 4; j++) if ((s.hl[j] < 0 ? -s.hl[j] : s.hl[j]) > mx[1]) mx[1] = s.hl[j] < 0 ? -s.hl[j] : s.hl[j];
+                for (j = 0; j < NST; j++) {
+                    int32_t a = s.st[j] < 0 ? -s.st[j] : s.st[j];
+                    if (a > mx[j < NCAP ? 0 : 1]) mx[j < NCAP ? 0 : 1] = a;
+                }
                 for (j = 0; j < NET_N; j++) if ((s.v[j] < 0 ? -s.v[j] : s.v[j]) > mx[2]) mx[2] = s.v[j] < 0 ? -s.v[j] : s.v[j];
                 if (i == n - 1) fprintf(stderr, "max xc %lld  hl %lld  v %lld%c", (long long)mx[0], (long long)mx[1], (long long)mx[2], 10);
             }

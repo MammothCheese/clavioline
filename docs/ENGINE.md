@@ -36,6 +36,25 @@ The network is simulated element for element. The netlist is in [HISTORY.md](HIS
   - hands the new gains to the audio interrupt.
 - **Tablet changes** fade out and in over 3 ms each way.
 
+### CPU load and the light mode
+
+The audio interrupt times itself against the 5.8 ms it has for each 256-sample block.
+
+- **STOPS mode** shows the load on the bottom line, as `CPU nn%  PEAK nn%`.
+- **Running short:** if the peak passes 90 %, PLAY mode shows `AUDIO OVERLOAD` instead of the usual line. A late render
+  makes the FM-1 replay the previous block, which sounds like a harsh buzz.
+- **Light mode:** after two seconds above 75 %, the firmware switches the network to **light mode** until power-off,
+  and STOPS mode then shows `LIGHT CPU`. In light mode the network runs at 22.05 kHz:
+  - its input is averaged over pairs of samples and its output interpolated;
+  - its coil constants are recomputed for that rate, and it still matches the exact analysis within 0.14 dB up to 9 kHz;
+  - against full rate, harmonics below 8 kHz change by 1–2 dB on most presets, and up to 7 dB on the brightest
+    (Harpsichord, Mandolin, Musical Saw).
+
+Other savings that keep the full-rate sound unchanged:
+- only the states in circuit and the nodes something reads are computed;
+- every multiply is 32 × 32 → 64;
+- the control valve's cathode network steps every 8 samples (with its exact 8-step matrix), and its gain glides in between.
+
 **Accuracy:** `tests/net_check.py` drives the chip's code with white noise and compares the result with the exact
 analysis of the same netlist, frequency warping included. Across 29 tablet and lever combinations it agrees within
 **0.31 dB** wherever the response is within 40 dB of its peak. What remains lies 80 dB or more below the loudest sound.
@@ -140,4 +159,5 @@ The build refuses code the FM-1 cannot run: floating point, 64-bit division, cal
 | `tools/gen_clav_tables.py` | Writes `clav_tables.h` from the values |
 | `tools/plot_net.py` | Plots network responses |
 | `tests/` | Host scripts and checks |
+| `tools/build.py` | The firmware build; it stamps the commit into the firmware, which shows `BUILD xxxxxxx` at power-on |
 | everything else | The FM-1 platform (Dinghy): USB, updates, rescue, MIDI, screen, keys, flash |

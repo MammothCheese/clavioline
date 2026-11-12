@@ -98,6 +98,19 @@ lines.append("static const int32_t GATE_GAM[4][3] = {")
 for Gam in gams:
     lines.append("    {" + ", ".join(str(q30(v)) for v in Gam) + "},")
 lines.append("};")
+# the same over 8 samples (the ISR steps the gate every 8 samples and interpolates the gain between)
+lines.append("static const int32_t GATE_PHI8[4][3][3] = {")
+g8 = []
+for Phi, Gam in zip(phis, gams):
+    P8 = np.linalg.matrix_power(Phi, 8)
+    G8 = sum(np.linalg.matrix_power(Phi, k) for k in range(8)) @ Gam
+    g8.append(G8)
+    lines.append("    {" + ", ".join("{" + ", ".join(str(q30(v)) for v in row) + "}" for row in P8) + "},")
+lines.append("};")
+lines.append("static const int32_t GATE_GAM8[4][3] = {")
+for G8 in g8:
+    lines.append("    {" + ", ".join(str(q30(v)) for v in G8) + "},")
+lines.append("};")
 lines.append("")
 
 # ---- V2 gain versus normalised cathode voltage --------------------------------------------------------
@@ -145,6 +158,12 @@ lines.append("static const int32_t NET_GM[3][3] = {" + ", ".join("{" + ", ".join
 lines.append("static const int32_t NET_AM[3][3] = {" + ", ".join("{" + ", ".join(str(q30(v)) for v in row) + "}" for row in cp["Am"]) + "};")
 lines.append(f"#define NET_G_L5 {int(round(cp['g_l5'] * 1e6 * 2**20))}   /* L5 + copper, uS Q20: i = g v + h, h' = g v + a i */")
 lines.append(f"#define NET_A_L5 {q30(cp['a_l5'])}")
+cph = net.companion(2.0 / FS)                   # the same at half rate (the network's light mode, 22.05 kHz)
+lines.append("/* ... and at 22.05 kHz, for the light mode (the ISR halves the network's rate when it runs short of time) */")
+lines.append("static const int32_t NET_GM_H[3][3] = {" + ", ".join("{" + ", ".join(str(int(round(v * 1e6 * 2**20))) for v in row) + "}" for row in cph["Gm"]) + "};")
+lines.append("static const int32_t NET_AM_H[3][3] = {" + ", ".join("{" + ", ".join(str(q30(v)) for v in row) + "}" for row in cph["Am"]) + "};")
+lines.append(f"#define NET_G_L5_H {int(round(cph['g_l5'] * 1e6 * 2**20))}")
+lines.append(f"#define NET_A_L5_H {q30(cph['a_l5'])}")
 LEVER_MAX = net.LEVER_MAX
 lines.append(f"#define LEVER_MAX {LEVER_MAX}u")
 lines.append("/* The knee lever = R32 across IN: its conductance (uS Q12) per lever step. Step 0 = 10 ohm (silent), then a log")

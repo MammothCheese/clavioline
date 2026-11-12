@@ -21,8 +21,10 @@ what had to be estimated.
    ```sh
    python3 tools/fm1_install.py clavioline.fwsc
    ```
-3. To go back to the official firmware or another one, use the Firmware Hub. It always reaches this firmware over USB.
-4. If anything goes wrong, hold **OCT−** while switching on. That starts the USB rescue: no sound, only the updater.
+3. At power-on the screen shows `BUILD` and a seven-character code: the commit the firmware was built from. Compare it
+   with the latest commit on GitHub to be sure you have the newest build.
+4. To go back to the official firmware or another one, use the Firmware Hub. It always reaches this firmware over USB.
+5. If anything goes wrong, hold **OCT−** while switching on. That starts the USB rescue: no sound, only the updater.
 
 Installing firmware is at your own risk; keep a backup of your FM-1.
 
@@ -56,7 +58,7 @@ knee lever up and back down for each note. Bowed swells are a slow push and rele
 
 Press **EDIT** and the keyboard becomes the row of tablets. Each key turns one on or off, and its LED shows which are
 down. **PLAY** holds the last note as a drone so you hear each change. **EDIT** or **HOME** goes back to playing; nothing
-is lost.
+is lost. The bottom line shows the audio engine's CPU load.
 
 ```
  black keys:    F#3  G#3         C#4  D#4          F#4  G#4  A#4    C#5

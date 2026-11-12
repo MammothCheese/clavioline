@@ -23,6 +23,18 @@ static const int32_t GATE_GAM[4][3] = {
     {0, 0, 0},
     {0, 0, 0},
 };
+static const int32_t GATE_PHI8[4][3][3] = {
+    {{1036114430, 33505784, 4119550}, {33505784, 823728006, 216341192}, {1647820, 86536477, 984067920}},
+    {{483471538, 355597210, 234474130}, {355597210, 637439834, 80659471}, {93789652, 32263788, 946228903}},
+    {{168977116, 14955431, 2416219}, {14955431, 823489024, 216486803}, {966488, 86594721, 985491694}},
+    {{103552163, 171532353, 122468437}, {171532353, 584047808, 50383156}, {48987375, 20153262, 940754502}},
+};
+static const int32_t GATE_GAM8[4][3] = {
+    {2061, 166843, 1489607},
+    {198947, 45310, 1459481},
+    {0, 0, 0},
+    {0, 0, 0},
+};
 
 /* V2 gain (Q15) over v = 0..1 in 256 steps (+1 guard): (e^(-v/0.12) - e^(-1/0.12)) / (1 - e^(-1/0.12)).
  * Remote-cut-off approximation; VX is an ESTIMATE. */
@@ -92,6 +104,11 @@ static const int32_t NET_GM[3][3] = {{78183061, -38067050, -38067050}, {-3806705
 static const int32_t NET_AM[3][3] = {{1041718042, 15592264, 15592264}, {15592264, 1041718042, 15592264}, {15592264, 15592264, 1041718042}};
 #define NET_G_L5 791976   /* L5 + copper, uS Q20: i = g v + h, h' = g v + a i */
 #define NET_A_L5 1072119857
+/* ... and at 22.05 kHz, for the light mode (the ISR halves the network's rate when it runs short of time) */
+static const int32_t NET_GM_H[3][3] = {{153003329, -74453504, -74453504}, {-74453504, 153003329, -74453504}, {-74453504, -74453504, 153003329}};
+static const int32_t NET_AM_H[3][3] = {{1011071661, 30496155, 30496155}, {30496155, 1011071661, 30496155}, {30496155, 30496155, 1011071661}};
+#define NET_G_L5_H 1582756
+#define NET_A_L5_H 1070500339
 #define LEVER_MAX 64u
 /* The knee lever = R32 across IN: its conductance (uS Q12) per lever step. Step 0 = 10 ohm (silent), then a log
  * taper 50 ohm .. 1e+06 ohm (ESTIMATE: R32's 'special grading' is not printed). */

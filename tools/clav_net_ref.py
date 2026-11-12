@@ -158,8 +158,8 @@ def ac_warped(cfg, lever, f):
     return ac(cfg, lever, fw)
 
 
-def companion():
-    """Constants for the trapezoidal companion models (SI units)."""
+def companion(T=T):
+    """Constants for the trapezoidal companion models (SI units), at sample period T."""
     Lm, R = lmatrix(), rw()
     Zp = R + (2.0 / T) * Lm                     # i[n] = Gm (v[n] + v[n-1]) + Am i[n-1]
     Gm = np.linalg.inv(Zp)

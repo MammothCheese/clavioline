@@ -90,18 +90,19 @@ enum { T_1, T_2, T_3, T_4, T_5, T_6, T_7, T_8, T_9, T_O, T_A, T_B, T_V, T_P, T_V
 #define TB(t) (1u << (t))
 #define NET_TABS 0x1FFFu
 
-/* DK form: v = KC xc + KL hl + KU isrc. xc = the capacitors' states in volts (history / g), hl = L5's and the
- * windings' history currents. No large companion currents cancel, so the integer ISR keeps its precision at any
- * lever position. */
+/* DK form: v = K st + KU isrc. st = the states: the capacitors' voltages (history / g) then L5's and the windings'
+ * history currents. No large companion currents cancel, so the integer ISR keeps its precision at any lever
+ * position. Only the states in circuit (sidx) and the nodes something reads (rnode) are kept, compacted. */
+#define NST (NCAP + 4u)
 typedef struct {
-    int32_t kc[NET_N][NCAP];                    /* dimensionless, Q28 */
-    int32_t kl[NET_N][4];                       /* MOhm, Q28: L5, La, Lb, Lc */
+    int32_t k[NET_N][NST];                      /* row r = node rnode[r], column j = state sidx[j]; Q28 */
     int32_t ku[NET_N];                          /* MOhm, Q28: the source at node A */
     int32_t g[NE];                              /* uS, Q12 (0: not in circuit) */
-    uint32_t tabs;
+    uint8_t sidx[NST], rnode[NET_N], nst, nrow;
+    uint32_t tabs, half;                        /* half: the light mode, the network at 22.05 kHz */
 } net_coef_t;
 
-static void net_compute(net_coef_t *c, uint32_t tabs, uint32_t lever)
+static void net_compute(net_coef_t *c, uint32_t tabs, uint32_t lever, uint32_t half)
 {
     static sf_t a[NET_N][2 * NET_N];
     int64_t G[NET_N + 1][NET_N + 1];
@@ -124,6 +125,9 @@ static void net_compute(net_coef_t *c, uint32_t tabs, uint32_t lever)
     g[E_COUT] = NG_COUT;
 #undef S
     c->tabs = tabs & NET_TABS;
+    c->half = half;
+    if (half)                                   /* a capacitor's companion conductance is 2C/T: half the rate, half the g */
+        for (k = 0; k < NCAP; k++) g[NE_CAP[k]] >>= 1;
 
     for (i = 0; i <= n; i++)                    /* the conductance matrix, exact in integers (uS Q20) */
         for (j = 0; j <= n; j++) G[i][j] = 0;
@@ -131,10 +135,10 @@ static void net_compute(net_coef_t *c, uint32_t tabs, uint32_t lever)
 #define STAMP(p, q, y) do { G[p][p] += (y); G[q][q] += (y); G[p][q] -= (y); G[q][p] -= (y); } while (0)
     for (k = 0; k < NE; k++)
         if (g[k]) STAMP(NE_P[k], NE_Q[k], (int64_t)g[k] << 8);
-    STAMP(ND_OUT, ND_N1, NET_G_L5);
+    STAMP(ND_OUT, ND_N1, half ? NET_G_L5_H : NET_G_L5);
     for (k = 0; k < 3u; k++)
         for (j = 0; j < 3u; j++) {
-            int64_t y = NET_GM[k][j];
+            int64_t y = half ? NET_GM_H[k][j] : NET_GM[k][j];
             G[NW_P[k]][NW_P[j]] += y; G[NW_Q[k]][NW_Q[j]] += y;
             G[NW_P[k]][NW_Q[j]] -= y; G[NW_Q[k]][NW_P[j]] -= y;
         }
@@ -162,16 +166,33 @@ static void net_compute(net_coef_t *c, uint32_t tabs, uint32_t lever)
 #define GI(r, col) ((col) == ND_GND ? zero : a[r][n + (col)])
     {
         sf_t zero = {0, 0};
-        for (i = 0; i < n; i++) {
-            for (k = 0; k < NCAP; k++) {
-                uint32_t e = NE_CAP[k];
-                sf_t d = sf_add(GI(i, NE_Q[e]), sf_neg(GI(i, NE_P[e])));
-                c->kc[i][k] = sf_to_q(sf_mul(d, sf_norm(g[e], -12)), 28);
+        uint32_t need = 1u << ND_OUT | 1u << ND_N1 | 1u << ND_IN | 1u << ND_NB | 1u << ND_N3, r, ns = 0;
+        for (k = 0; k < NCAP; k++)              /* the states in circuit, and the nodes their updates read */
+            if (g[NE_CAP[k]]) {
+                c->sidx[ns++] = (uint8_t)k;
+                need |= 1u << NE_P[NE_CAP[k]] | 1u << NE_Q[NE_CAP[k]];
             }
-            c->kl[i][0] = sf_to_q(sf_add(GI(i, ND_N1), sf_neg(GI(i, ND_OUT))), 28);
-            for (k = 0; k < 3u; k++)
-                c->kl[i][k + 1u] = sf_to_q(sf_add(GI(i, NW_Q[k]), sf_neg(GI(i, NW_P[k]))), 28);
-            c->ku[i] = sf_to_q(GI(i, ND_A), 28);
+        for (k = 0; k < 4u; k++) c->sidx[ns++] = (uint8_t)(NCAP + k);
+        c->nst = (uint8_t)ns;
+        c->nrow = 0;
+        for (i = 0; i < n; i++) {
+            if (!(need >> i & 1u)) continue;
+            r = c->nrow++;
+            c->rnode[r] = (uint8_t)i;
+            for (j = 0; j < ns; j++) {
+                uint32_t st = c->sidx[j];
+                sf_t d;
+                if (st < NCAP) {
+                    uint32_t e = NE_CAP[st];
+                    d = sf_mul(sf_add(GI(i, NE_Q[e]), sf_neg(GI(i, NE_P[e]))), sf_norm(g[e], -12));
+                } else if (st == NCAP) {
+                    d = sf_add(GI(i, ND_N1), sf_neg(GI(i, ND_OUT)));
+                } else {
+                    d = sf_add(GI(i, NW_Q[st - NCAP - 1u]), sf_neg(GI(i, NW_P[st - NCAP - 1u])));
+                }
+                c->k[r][j] = sf_to_q(d, 28);
+            }
+            c->ku[r] = sf_to_q(GI(i, ND_A), 28);
         }
     }
 #undef GI
@@ -179,11 +200,11 @@ static void net_compute(net_coef_t *c, uint32_t tabs, uint32_t lever)
 
 /* ---- the running network (ISR) ------------------------------------------------------------------------ */
 /* States are int32: at three times the loudest source (white noise) they peak near 2^22 (capacitors, volts) and
- * 2^28.4 (inductor currents); tests/net_test.c NET_MAX=1 measures it. Stores saturate all the same. */
+ * 2^28.4 (inductor currents); tests/net_test.c NET_MAX=1 measures it. Stores saturate all the same. Every multiply
+ * below is 32 x 32 -> 64. */
 typedef struct {
-    int32_t xc[NCAP];                           /* capacitor states, volts (2^-16 V) */
-    int32_t hl[4];                              /* L5, La, Lb, Lc history currents (2^-16 uA) */
-    int32_t v[NET_N + 1];                       /* node voltages (v[ND_GND] = 0) */
+    int32_t st[NST];                            /* capacitor voltages (2^-16 V), then L5, La, Lb, Lc currents (2^-16 uA) */
+    int32_t v[NET_N + 1];                       /* node voltages (v[ND_GND] = 0; nodes nobody reads stay 0) */
 } net_state_t;
 
 static int32_t sat32(int64_t x) { return x > 2147483647 ? 2147483647 : x < -2147483647 ? -2147483647 : (int32_t)x; }
@@ -194,36 +215,42 @@ static void net_adopt(net_state_t *s, const net_coef_t *c)   /* elements leaving
 {
     uint32_t k;
     for (k = 0; k < NCAP; k++)
-        if (!c->g[NE_CAP[k]]) s->xc[k] = 0;
+        if (!c->g[NE_CAP[k]]) s->st[k] = 0;
 }
 
 static int32_t net_step(net_state_t *s, const net_coef_t *c, int32_t isrc)   /* source current units -> V_OUT units */
 {
-    int32_t *v = s->v;
-    int64_t vw[3], iw[3], gv[3];
-    uint32_t k, n;
-    for (n = 0; n < NET_N; n++) {
-        const int32_t *kc = c->kc[n], *kl = c->kl[n];
-        int64_t acc = (int64_t)c->ku[n] * isrc;
-        for (k = 0; k < NCAP; k++) acc += (int64_t)kc[k] * s->xc[k];
-        for (k = 0; k < 4u; k++) acc += (int64_t)kl[k] * s->hl[k];
-        v[n] = sat32(RSH(acc, 28));
+    int32_t *v = s->v, *st = s->st, vw[3], iw[3];
+    int64_t gv[3];
+    const int32_t (*gm)[3] = c->half ? NET_GM_H : NET_GM, (*am)[3] = c->half ? NET_AM_H : NET_AM;
+    int32_t gl5 = c->half ? NET_G_L5_H : NET_G_L5, al5 = c->half ? NET_A_L5_H : NET_A_L5;
+    uint32_t r, j, k, ns = c->nst;
+    int32_t x[NST];
+    for (j = 0; j < ns; j++) x[j] = st[c->sidx[j]];     /* (the states in circuit, contiguous) */
+    for (r = 0; r < c->nrow; r++) {
+        const int32_t *kr = c->k[r];
+        int64_t acc = (int64_t)c->ku[r] * isrc;
+        for (j = 0; j < ns; j++) acc += (int64_t)kr[j] * x[j];
+        v[c->rnode[r]] = sat32(RSH(acc, 28));
     }
-    v[ND_GND] = 0;
-    for (k = 0; k < NCAP; k++) {                /* capacitor: x' = -(2 v + x) */
-        uint32_t e = NE_CAP[k];
-        s->xc[k] = c->g[e] ? sat32(-(2 * ((int64_t)v[NE_P[e]] - v[NE_Q[e]]) + s->xc[k])) : 0;
+    for (j = 0; j < ns; j++) {                  /* capacitor: x' = -(2 v + x) */
+        uint32_t i = c->sidx[j], e;
+        if (i >= NCAP) break;
+        e = NE_CAP[i];
+        st[i] = sat32(-(2 * ((int64_t)v[NE_P[e]] - v[NE_Q[e]]) + st[i]));
     }
     {                                           /* L5: i = g v + h, h' = g v + a i */
-        int64_t gi = RSH((int64_t)NET_G_L5 * ((int64_t)v[ND_OUT] - v[ND_N1]), 20), i = gi + s->hl[0];
-        s->hl[0] = sat32(gi + RSH(i * NET_A_L5, 30));
+        int64_t gi = RSH((int64_t)gl5 * (v[ND_OUT] - v[ND_N1]), 20);
+        int32_t i = sat32(gi + st[NCAP]);
+        st[NCAP] = sat32(gi + RSH((int64_t)i * al5, 30));
     }
-    for (k = 0; k < 3u; k++) vw[k] = (int64_t)v[NW_P[k]] - v[NW_Q[k]];
+    for (k = 0; k < 3u; k++) vw[k] = v[NW_P[k]] - v[NW_Q[k]];
     for (k = 0; k < 3u; k++) {                  /* windings: i = GM v + h, h' = GM v + AM i */
-        gv[k] = RSH(NET_GM[k][0] * vw[0] + NET_GM[k][1] * vw[1] + NET_GM[k][2] * vw[2], 20);
-        iw[k] = gv[k] + s->hl[k + 1u];
+        gv[k] = RSH((int64_t)gm[k][0] * vw[0] + (int64_t)gm[k][1] * vw[1] + (int64_t)gm[k][2] * vw[2], 20);
+        iw[k] = sat32(gv[k] + st[NCAP + 1u + k]);
     }
     for (k = 0; k < 3u; k++)
-        s->hl[k + 1u] = sat32(gv[k] + RSH(NET_AM[k][0] * iw[0] + NET_AM[k][1] * iw[1] + NET_AM[k][2] * iw[2], 30));
+        st[NCAP + 1u + k] = sat32(gv[k] + RSH((int64_t)am[k][0] * iw[0] + (int64_t)am[k][1] * iw[1]
+                                               + (int64_t)am[k][2] * iw[2], 30));
     return v[ND_OUT];
 }

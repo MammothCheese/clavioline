@@ -32,6 +32,9 @@ static void app_idle(void);
 #if BOARD_SMK37
 #error "CLAVIOLINE is FM-1 only for now"
 #endif
+#ifndef APP_BUILD
+#define APP_BUILD "local"                       /* tools/build.py passes the commit it built */
+#endif
 
 /* ---- the sound (audio ISR) ------------------------------------------------------------------------- */
 #define OSC_AMP 12000                           /* trapezoid peak, Q15 */
@@ -52,6 +55,12 @@ static volatile uint32_t a_inc;                 /* main -> ISR: phase step of th
 static volatile uint32_t a_held;                /* main -> ISR: a key (or MIDI note) is down */
 static volatile uint32_t a_tabs;                /* main -> ISR: the tablets (P, vibrato, sub-octaves) */
 static volatile uint32_t a_sounding;            /* ISR -> main: something can still be heard */
+static volatile uint32_t a_load, a_load_peak;   /* ISR -> main: render time, per mille of the block (peak held) */
+#define HALF_FRAMES_TICKS (256u * 1000000u / 44100u * FM1_TICKS_PER_US)   /* one 256-frame block, 24 MHz ticks */
+#ifdef DINGHY_HOST
+#define FM1_TICKS_PER_US 24u
+static uint32_t fm1_ticks(void) { return 0; }   /* (no load on the host) */
+#endif
 
 static net_coef_t net_buf[2];                   /* the network: the ISR runs net_buf[net_cur] */
 static volatile uint32_t net_cur, net_pending;  /* main: 1 = adopt the other buffer, 3 = with a fade (new tablets) */
@@ -59,7 +68,7 @@ static net_state_t net_st;
 
 static struct {
     uint32_t ph, held, pend_on, pend_off, lfo, sub;
-    int32_t run, stopping, gate, fade, carry, dcx, dcy, xfade, xdir;
+    int32_t run, stopping, gate, fade, carry, dcx, dcy, xfade, xdir, g, gstep, hx, hy;
     int32_t x[3];                               /* V2 cathode network, Q30: 1 = cut off, 0 = conducting */
 } au = {.x = {1 << 30, 1 << 30, 1 << 30}, .xfade = 32767};
 
@@ -103,12 +112,12 @@ static void app_audio(int32_t *out, uint32_t n)
     uint32_t i, k, tabs = a_tabs, held = a_held, h, m, invi, c[4], inc = a_inc;
     int32_t S, ds[4], sounding = 0, am = 32767, s1, s2;
     const net_coef_t *nc;
-    const int32_t (*phi)[3];
-    const int32_t *gam;
+    uint32_t t0 = fm1_ticks();
 
     /* the network: adopt a new one now, or after fading out (a tablet change: real tablets click) */
     if (net_pending && (net_pending != 3u || (au.xdir < 0 && au.xfade <= 0))) {
         net_cur ^= 1u;
+        if (net_buf[net_cur].half != net_buf[net_cur ^ 1u].half) memset(&net_st, 0, sizeof net_st);
         net_adopt(&net_st, &net_buf[net_cur]);
         if (net_pending == 3u) au.xdir = 1;
         net_pending = 0;
@@ -138,8 +147,7 @@ static void app_audio(int32_t *out, uint32_t n)
     ds[0] = S; ds[1] = -S; ds[2] = -S; ds[3] = S;
 
     for (i = 0; i < n; i++) {
-        int32_t v = 0, g, vk, y;
-        uint32_t idx, frac;
+        int32_t v = 0, g, y;
 
         if (held && !au.held) {                 /* key contacts: 1 starts the oscillator, 2 opens the gate */
             au.pend_off = 0;
@@ -156,19 +164,24 @@ static void app_audio(int32_t *out, uint32_t n)
         if (au.pend_on && !--au.pend_on) au.gate = 1;
         if (au.pend_off && !--au.pend_off) au.stopping = 1;
 
-        k = (uint32_t)au.gate << 1 | (tabs & TB(T_P) ? 1u : 0u);   /* V2's cathode network */
-        phi = GATE_PHI[k];
-        gam = GATE_GAM[k];
-        {
-            int32_t x0 = au.x[0], x1 = au.x[1], x2 = au.x[2];
+        if (!(i & 7u)) {                        /* V2's cathode network, stepped every 8 samples (exactly) */
+            const int32_t (*phi)[3], *gam;
+            int32_t x0 = au.x[0], x1 = au.x[1], x2 = au.x[2], vk, gt;
+            uint32_t idx, frac;
+            k = (uint32_t)au.gate << 1 | (tabs & TB(T_P) ? 1u : 0u);
+            phi = GATE_PHI8[k];
+            gam = GATE_GAM8[k];
             au.x[0] = (int32_t)(((int64_t)phi[0][0] * x0 + (int64_t)phi[0][1] * x1 + (int64_t)phi[0][2] * x2) >> 30) + gam[0];
             au.x[1] = (int32_t)(((int64_t)phi[1][0] * x0 + (int64_t)phi[1][1] * x1 + (int64_t)phi[1][2] * x2) >> 30) + gam[1];
             au.x[2] = (int32_t)(((int64_t)phi[2][0] * x0 + (int64_t)phi[2][1] * x1 + (int64_t)phi[2][2] * x2) >> 30) + gam[2];
+            vk = au.x[2] < 0 ? 0 : au.x[2] > (1 << 30) ? (1 << 30) : au.x[2];
+            idx = (uint32_t)vk >> 22;
+            frac = ((uint32_t)vk >> 6) & 0xFFFFu;
+            gt = GATE_GAIN[idx] + (int32_t)((((int32_t)GATE_GAIN[idx + 1u] - (int32_t)GATE_GAIN[idx]) * (int32_t)frac) >> 16);
+            au.gstep = (gt - au.g) >> 3;        /* the gain glides there over the 8 samples */
         }
-        vk = au.x[2] < 0 ? 0 : au.x[2] > (1 << 30) ? (1 << 30) : au.x[2];
-        idx = (uint32_t)vk >> 22;
-        frac = ((uint32_t)vk >> 6) & 0xFFFFu;
-        g = GATE_GAIN[idx] + (int32_t)((((int32_t)GATE_GAIN[idx + 1u] - (int32_t)GATE_GAIN[idx]) * (int32_t)frac) >> 16);
+        g = au.g;
+        au.g += au.gstep;
 
         if (au.run) {
             int32_t subs, carry_next = 0;
@@ -204,7 +217,16 @@ static void app_audio(int32_t *out, uint32_t n)
         }
         v = (int32_t)(((int64_t)v * g) >> 15);   /* the control valve */
         v = (int32_t)(((int64_t)v * am) >> 15);
-        y = net_step(&net_st, nc, v * NET_ISRC_MUL);   /* the tone-forming network, knee lever inside */
+        if (!nc->half) {
+            y = net_step(&net_st, nc, v * NET_ISRC_MUL);   /* the tone-forming network, knee lever inside */
+        } else if (!(i & 1u)) {                 /* light mode: the network every other sample, interpolated */
+            au.hx = v * NET_ISRC_MUL;
+            y = au.hy;
+        } else {
+            int32_t yn = net_step(&net_st, nc, (int32_t)(((int64_t)au.hx + (int64_t)v * NET_ISRC_MUL) >> 1));
+            y = (int32_t)(((int64_t)au.hy + yn) >> 1);
+            au.hy = yn;
+        }
         y = (int32_t)(((int64_t)y * NET_OUT_MUL) >> 16);
         if (au.xdir) {                          /* tablet change: 2.9 ms out, 2.9 ms in */
             au.xfade += au.xdir * 256;
@@ -221,6 +243,11 @@ static void app_audio(int32_t *out, uint32_t n)
         out[2u * i + 1u] += y;
     }
     a_sounding = (uint32_t)(sounding | au.run);
+    {                                           /* the load: this render's time against the 5.8 ms it may take */
+        uint32_t pm = (fm1_ticks() - t0) / (HALF_FRAMES_TICKS / 1000u);
+        a_load = pm;
+        if (pm > a_load_peak) a_load_peak = pm;
+    }
 }
 
 /* ---- notes (main loop) ------------------------------------------------------------------------------ */
@@ -387,17 +414,29 @@ static void draw_lever(void)
     cv_blit(0, 194);
 }
 
-static void draw_status(const char *msg)
+static void draw_status(const char *msg, uint16_t colour)
 {
     char s[32] = "KEYS F3-G5  TUNE +00";
     int32_t t = set.tune < 0 ? -set.tune : set.tune;
-    if (msg) { draw_text_box(0, 220, 240, &FONT_S, msg, C_AMBER, 1); return; }
+    if (msg) { draw_text_box(0, 220, 240, &FONT_S, msg, colour, 1); return; }
     s[6] = (char)('3' + set.window);
     s[9] = (char)('5' + set.window);
     s[17] = set.tune < 0 ? '-' : '+';
     s[18] = (char)('0' + t / 10);
     s[19] = (char)('0' + t % 10);
     draw_text_box(0, 220, 240, &FONT_S, s, C_GREY, 1);
+}
+
+static char *put_pct(char *p, uint32_t pm)      /* per mille -> "nn%" */
+{
+    uint32_t v = (pm + 5u) / 10u;
+    if (v > 999u) v = 999u;
+    if (v >= 100u) *p++ = (char)('0' + v / 100u);
+    if (v >= 10u) *p++ = (char)('0' + v / 10u % 10u);
+    *p++ = (char)('0' + v % 10u);
+    *p++ = '%';
+    *p = 0;
+    return p;
 }
 
 /* ---- MIDI in ---------------------------------------------------------------------------------------- */
@@ -428,7 +467,13 @@ static const int8_t KEY_TAB[27] = {             /* key (0 = F3) -> tablet, -1 no
 static void app_main(void)
 {
     uint32_t prev = 0, k, t_change = 0, dirty = 0, t_lever = 0, stops = 0, drone = 0, drone_note = 0;
-    uint32_t net_tabs = ~0u, net_lever = ~0u, t_msg = 0;
+    uint32_t net_tabs = ~0u, net_lever = ~0u, t_msg = 0, t_cpu = 0, cpu_over = 0, hot = 0, net_light;
+#ifdef CLAV_FORCE_LIGHT
+    uint32_t light = 1;
+#else
+    uint32_t light = 0;                         /* the light mode: the network at half rate, when the CPU runs short */
+#endif
+    char cpu_txt[40] = "CPU";
     uint32_t drawn_note = ~0u, drawn_lever = ~0u, drawn_cpl = ~0u, drawn_st = ~0u, drawn_tabs = ~0u, drawn_pre = ~0u;
     uint32_t drawn_stops = ~0u;
     const char *msg = 0;
@@ -442,13 +487,16 @@ static void app_main(void)
         for (k = 0; k < NUSER; k++) set.user[k].tabs = 0;
         apply_preset(5);                        /* TRUMPET: the raw tone with vibrato II */
     }
-    net_compute(&net_buf[0], set.tabs, lever);  /* the network before the sound starts */
+    net_compute(&net_buf[0], set.tabs, lever, light);   /* the network before the sound starts */
     net_adopt(&net_st, &net_buf[0]);
     net_tabs = set.tabs & NET_TABS;
     net_lever = lever;
+    net_light = light;
     a_tabs = set.tabs;
 
     lcd_fill(0, 0, 240, 240, C_BLACK);
+    msg = "BUILD " APP_BUILD;                   /* which firmware this is, for the first seconds */
+    t_msg = fm1_ms;
 
     for (;;) {
         uint32_t keys, down, up, rel, b, base = KEY0 + 12u * set.window, changed = 0;
@@ -538,9 +586,10 @@ static void app_main(void)
         a_tabs = set.tabs;
 
         /* a new network when the tablets or the lever moved (and the ISR has taken the last one) */
-        if (!net_pending && ((set.tabs & NET_TABS) != net_tabs || lever != net_lever)) {
-            uint32_t topo = (set.tabs & NET_TABS) != net_tabs;
-            net_compute(&net_buf[net_cur ^ 1u], set.tabs, lever);
+        if (!net_pending && ((set.tabs & NET_TABS) != net_tabs || lever != net_lever || light != net_light)) {
+            uint32_t topo = (set.tabs & NET_TABS) != net_tabs || light != net_light;
+            net_compute(&net_buf[net_cur ^ 1u], set.tabs, lever, light);
+            net_light = light;
             net_tabs = set.tabs & NET_TABS;
             net_lever = lever;
             net_pending = topo ? 3u : 1u;
@@ -561,8 +610,26 @@ static void app_main(void)
         fm1_led_key(BTN_PLAY, drone);
 
         if (msg && fm1_ms - t_msg > 1500u) { msg = 0; drawn_st = ~0u; }
+        if (fm1_ms - t_cpu >= 1000u) {          /* the audio load, once a second: shown in STOPS, or when it runs out */
+            char *q = cpu_txt;
+            const char *w = "CPU ";
+            uint32_t pk = a_load_peak;
+            a_load_peak = 0;
+            t_cpu = fm1_ms;
+            cpu_over = pk > 900u;
+            hot = pk > 750u ? hot + 1u : 0u;    /* two hot seconds in a row: the light mode, until power-off */
+            if (hot >= 2u && !light) { light = 1; msg = "LIGHT MODE: NETWORK AT 22 KHZ"; t_msg = fm1_ms; }
+            if (cpu_over) w = "AUDIO OVERLOAD ";
+            else if (light) w = "LIGHT CPU ";
+            while (*w) *q++ = *w++;
+            q = put_pct(q, a_load);
+            w = "  PEAK ";
+            while (*w) *q++ = *w++;
+            put_pct(q, pk);
+            if (stops || cpu_over) drawn_st = ~0u;
+        }
         idle_ok = 1;
-        if (stops != drawn_stops) { drawn_stops = stops; draw_title(stops); }
+        if (stops != drawn_stops) { drawn_stops = stops; draw_title(stops); drawn_st = ~0u; }
         if (set.tabs != drawn_tabs) { drawn_tabs = set.tabs; draw_rail(); }
         if ((set.preset | edited << 15) != drawn_pre) { drawn_pre = set.preset | edited << 15; draw_preset(); }
         if (((uint32_t)(top + 1) | (uint32_t)(set.coupler + 1) << 8) != drawn_note) {
@@ -571,10 +638,12 @@ static void app_main(void)
         }
         if ((uint32_t)(set.coupler + 1) != drawn_cpl) { drawn_cpl = (uint32_t)(set.coupler + 1); draw_coupler(); }
         if (lever != drawn_lever) { drawn_lever = lever; draw_lever(); }
-        if (msg && drawn_st != 0xFFFFFFFEu) { drawn_st = 0xFFFFFFFEu; draw_status(msg); }
-        else if (!msg && ((uint32_t)set.window | (uint32_t)(set.tune + 50) << 1) != drawn_st) {
+        if (msg && drawn_st != 0xFFFFFFFEu) { drawn_st = 0xFFFFFFFEu; draw_status(msg, C_AMBER); }
+        else if (!msg && (stops || cpu_over)) {
+            if (drawn_st != 0xFFFFFFFDu) { drawn_st = 0xFFFFFFFDu; draw_status(cpu_txt, cpu_over ? C_AMBER : C_GREY); }
+        } else if (!msg && ((uint32_t)set.window | (uint32_t)(set.tune + 50) << 1) != drawn_st) {
             drawn_st = (uint32_t)set.window | (uint32_t)(set.tune + 50) << 1;
-            draw_status(0);
+            draw_status(0, C_GREY);
         }
         idle_ok = 0;
 
