@@ -220,7 +220,7 @@ static void read_script(const char *path)
     script_n = n;
 }
 
-static const char *host_out = "build/host/dinghy";
+static const char *host_out = "build/host/clavioline";
 static int16_t *wav;
 static uint32_t wav_n;
 

@@ -1,0 +1,22 @@
+# Stage 2 checks (tests/check_stage2.py reads the WAV): key k = bit k, 0 = F3, 7 = C4, 19 = C5
+# highest-note priority and legato
+200 keys 0x80
+800 keys 0x81
+1200 keys 0x80081
+1700 keys 0x81
+2100 keys 0
+2400 shot
+# tablet P (ENV), then the same note
+2600 btn 4
+2800 keys 0x80
+3400 keys 0
+3500 btn 4
+# coupler HIGH (OCT+), knee lever down and up while holding
+3700 btn 1
+3900 keys 0x80
+4300 enc 6 -40
+4700 enc 6 40
+5100 keys 0
+5200 btn 0
+5300 shot
+5500 end
