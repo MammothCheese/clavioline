@@ -81,9 +81,11 @@ The bottom line shows the audio engine's CPU load.
 
 **SEQ** opens a page of settings that the original did not have. **SELECT** chooses one, **KNOB 1** changes it, and
 **SEQ** goes back.
-- **PLUCK DECAY** (off, 0.3, 0.6, 1.2 or 2.5 s): every key press starts at full level and fades away. The original
-  needed a flick of the knee lever for this, which is awkward on the PRESETS knob.
-- **DECAY ON**: only on notes with tablet **P** down, or on all notes.
+- **PLUCK DECAY** (off, 0.3, 0.6, 1.2 or 2.5 s; 0.6 s to start with): every key press starts at full level and fades
+  away. The original needed a flick of the knee lever for this, which is awkward on the PRESETS knob.
+- **DECAY ON**: only on notes with tablet **P** down (to start with), or on all notes.
+
+So out of the box, **P** plucks: a sharp start with a ping, then the note dies away.
 
 ### Presets
 

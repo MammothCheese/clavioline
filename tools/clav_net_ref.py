@@ -34,8 +34,9 @@ P = dict(
     R5=100e3,      # CONCERT: V2 anode load 100k
     C5=0.02e-6,    # CONCERT: V2 coupling capacitor .02
     C30=100e-12, R29=5e3, R30=3e6, C28=0.001e-6, R31=20e3, C29=0.05e-6,                    # PRINTED
-    C17=0.1e-6,    # CONCERT: the V capacitor, read as ".1" on the faint Concert drawing (the 1952 label next to C17
-                   # reads "100pF", but as 100 pF V would change nothing audible; Selmer offers V as an alternative to O)
+    C17=0.01e-6,   # CONCERT, uncertain: the V capacitor is faint on the Concert drawing (".1" or ".01"). The 1952 label
+                   # beside C17 reads "100pF", but then V changes nothing audible. Selmer offers "O or V" on the Violin
+                   # card: with 0.01 uF, V darkens the tone at O's level (0.1 uF also drops it 6-10 dB)
     C18=0.02e-6, C19=0.005e-6, R26=250e3, C20=0.005e-6, R27=250e3, C21=0.015e-6,          # PRINTED
     C22=0.01e-6, C23=0.005e-6, C24=200e-12, C25=0.005e-6, C26=0.015e-6, R28=10e3,         # PRINTED
     C27=0.02e-6,                                                                          # PRINTED

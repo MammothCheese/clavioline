@@ -4,6 +4,10 @@
 60 keys 0x8
 70 keys 0
 80 btn 7
+# OPTIONS: the pluck decay off (it is on by default), so the attack is measured on its own
+100 btn 11
+110 enc 2 -4
+120 btn 11
 # highest-note priority and legato
 200 keys 0x80
 800 keys 0x81

@@ -56,7 +56,7 @@ Two parts of the drawing are simplified:
 | Part | On the chip | Difference from the drawing |
 |---|---|---|
 | C5, the 0.02 µF coupling capacitor | A first-order high-pass at 71 Hz on the source; R5 moves to the network input | Within 0.8 dB from the lowest note (87 Hz) up |
-| C17, the V tablet's 0.1 µF (with R29, R30) | Left out while V is up; it then sits behind 3 MΩ | Within 0.07 dB |
+| C17, the V tablet's 0.01 µF (with R29, R30) | Left out while V is up; it then sits behind 3 MΩ | Within 0.07 dB |
 
 Both remove a state and a node from every step. `tools/clav_net_ref.py` models the network as the chip runs it, and
 `full=True` gives it as drawn.
@@ -95,7 +95,7 @@ Change any value, then run `python3 tools/gen_clav_tables.py` and rebuild.
 | Value | Setting | Source |
 |---|---|---|
 | All capacitors and resistors of Fig. 4 | as drawn | Printed |
-| C17 (tablet V) | 0.1 µF | Concert (read as ".1"); the 1952 "100pF" label would make V inaudible ([HISTORY.md](HISTORY.md)) |
+| C17 (tablet V) | 0.01 µF | Concert, faint (".1" or ".01"); the 1952 "100pF" label would make V inaudible ([HISTORY.md](HISTORY.md)) |
 | Control valve anode load, coupling capacitor | 100 kΩ, 0.02 µF | Concert |
 | L5 | 15 H, 1 kΩ copper, 2 MΩ core loss | **Estimate**: puts tablets 1 / 2 near 290 / 580 Hz |
 | L4 + L2, L1, L3 | 2 H each, coupling 0.95, 200 Ω copper, 60 kΩ core loss | **Estimate**: puts tablets 3 / 4 near 800 / 460 Hz, A near 800 Hz, 5 / 6 near 1.1 / 1.6 kHz |
@@ -110,7 +110,7 @@ Change any value, then run `python3 tools/gen_clav_tables.py` and rebuild.
 |---|---|---|
 | Attack time constants | 19.2 ms; 1.54 ms with P | Derived from the printed cathode network |
 | Valve turn-on curve | gain e^(−v/0.12) | **Estimate** (remote-cut-off valve) |
-| Control valve standing current | as large as the signal swing; it opens with the gate, so a fast opening (P) rings the tone network: the percussive transient | Effect printed ("a definite transient", 1952; "an impact or percussion effect", patent); **size estimated** |
+| Control valve standing current | twice the signal swing; it opens with the gate, so a fast opening (P) rings the tone network: the percussive transient | Effect printed ("a definite transient", 1952; "an impact or percussion effect", patent); **size estimated** |
 | Key contact delays | oscillator 3 ms before the gate; gate closes 4 ms before the oscillator stops | **Estimate** |
 | Trapezoid | 50 % duty, 100 µs edges | Duty from "similar to a square wave"; **edge estimated** |
 | Sub I / II levels | f = the main tone's level, p = 10 dB softer | **Estimate** |
@@ -128,8 +128,8 @@ The keys keep playing, so you hear each change. The settings are saved with the 
 
 | Setting | Values | What it does |
 |---|---|---|
-| PLUCK DECAY | OFF, 0.3, 0.6, 1.2, 2.5 s | Each key press starts the note at full level, then it fades 40 dB over the time chosen. This stands in for flicking the knee lever back after each note, which is how the original made plucked sounds |
-| DECAY ON | P NOTES, ALL NOTES | Only while tablet P is down, or on every note |
+| PLUCK DECAY | OFF, 0.3, **0.6** (default), 1.2, 2.5 s | Each key press starts the note at full level, then it fades 40 dB over the time chosen. This stands in for flicking the knee lever back after each note, which is how the original made plucked sounds |
+| DECAY ON | **P NOTES** (default), ALL NOTES | Only while tablet P is down, or on every note |
 
 The decay is a gain on the network's output, before the valve stage. On the original, pulling the lever back also
 darkened the tone, because the lever sits inside the network; this simpler fade does not.
@@ -148,7 +148,7 @@ them:
 | Pitch of C4 and C5, highest-note priority, return to the held note, coupler | within ±0.2 cents |
 | Legato note change | no new attack (0.6 dB level change) |
 | Attack to −40 / −20 / −3 dB | 14 / 28 / 62 ms; with P 2 / 2 / 6 ms |
-| Start of a note: first 40 ms peak against the steady peak | 0.35 without P; 1.24 with P (Trumpet), 2.3 (Harpsichord, Mandolin) |
+| Start of a note: first 40 ms peak against the steady peak (decay off) | 0.38 without P; 1.52 with P (Trumpet) |
 | Knee lever from step 48 to 8 | −38 dB |
 | Aliasing on a 3136 Hz note | −39.6 dB below the harmonics |
 | Vibrato I / II / III | 4.49 / 5.52 / 6.49 Hz; deep / shallow depth 3.78 |

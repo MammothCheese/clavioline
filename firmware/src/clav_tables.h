@@ -65,7 +65,7 @@ static const uint16_t GATE_GAIN[258] = {
 #define NG_C24 72253
 #define NG_C25 1806336
 #define NG_C26 5419008
-#define NG_C17 36126720
+#define NG_C17 3612672
 #define NG_R29 819200
 #define NG_R30 1365
 #define NG_C28 361267

@@ -8,6 +8,7 @@
 100 btn 7
 # SEQ: PLUCK DECAY -> 1.2 S (KNOB 1, three steps); a screen; back
 200 btn 11
+250 enc 2 -4
 300 enc 2 3
 400 shot
 500 btn 11

@@ -40,9 +40,9 @@ static void app_idle(void);
 #define EDGE_K_Q16 144507u                      /* trapezoid edge: t_e * FS / 2, Q16; t_e = 100 us. ESTIMATE ("trapezoidal": visible slopes) */
 #define SUB_F 12000                             /* Sub I / II "f": as loud as the main tone. ESTIMATE */
 #define SUB_P 3795                              /* "p": 10 dB softer. ESTIMATE */
-#define V2_DC 12000                             /* the control valve's standing anode current, as large as the signal
-                                                 * swing (a valve clipping the trapezoid between cut-off and full
-                                                 * conduction: ESTIMATE). Opening fast (tablet P), its step rings the
+#define V2_DC 24000                             /* the control valve's standing anode current, twice the signal swing
+                                                 * (ESTIMATE: a valve biased for the trapezoid, idling well above
+                                                 * cut-off). Opening fast (tablet P), its step rings the
                                                  * tone network: the "definite transient" (1952), "an impact or
                                                  * percussion effect" (patent) */
 #define T_ON 66u                                /* key contact 1 (oscillator) to contact 2 (gate): 3 ms at 22.05 kHz. ESTIMATE */
@@ -249,7 +249,7 @@ static void app_audio(int32_t *out, uint32_t n)
             v = (v * au.fade) >> 15;            /* (|v| < 45000: 32-bit products) */
         }
         v = (v * am) >> 15;                     /* (vibrato's small AM is on the oscillator, V1) */
-        v = ((v + V2_DC) * g) >> 15;            /* the control valve: its standing current opens with the signal */
+        v = (int32_t)(((int64_t)(v + V2_DC) * g) >> 15);   /* the control valve: its standing current opens too */
         {                                       /* C5, the coupling capacitor: a first-order high-pass */
             int32_t hp = ((au.hp + v - au.hpx) * HP_A_Q13) >> 13;
             au.hpx = v;
@@ -314,7 +314,7 @@ static struct {
     setup_t user[NUSER];
     uint8_t decay, decay_all, pad2[2];          /* OPTIONS: the pluck decay (0 = off, 1..4), on all notes */
 } set;
-#define SET_VER 3u
+#define SET_VER 4u
 
 static uint32_t lever = 48;                     /* the knee lever (not saved): 3/4 open at power-on */
 static uint8_t cnt[128];                        /* how many keys / MIDI notes / the drone hold each note */
@@ -636,10 +636,16 @@ static void app_main(void)
 
     if (settings_load(&set, sizeof set) || set.ver != SET_VER || set.coupler < -1 || set.coupler > 1 || set.window > 1u
         || set.tune < -50 || set.tune > 50 || set.preset >= NPRESET || set.decay > 4u || set.decay_all > 1u) {
+        if (set.ver == 3u && set.preset < NPRESET && set.decay <= 4u && set.decay_all <= 1u) {
+            set.ver = SET_VER;                  /* from version 3: keep everything, turn the pluck decay on */
+            if (!set.decay) set.decay = 2u;
+        } else {
         memset(&set, 0, sizeof set);
         set.ver = SET_VER;
         for (k = 0; k < NUSER; k++) set.user[k].tabs = 0;
         apply_preset(5);                        /* TRUMPET: the raw tone with vibrato II */
+        set.decay = 2u;                         /* OPTIONS: P notes die away in 0.6 s */
+        }
     }
     net_compute(&net_buf[0], set.tabs, lever, 1);   /* the network (at 22.05 kHz) before the sound starts */
     net_adopt(&net_st, &net_buf[0]);
