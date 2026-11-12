@@ -139,9 +139,20 @@ def stage4(path):
     check("Sub I f: the octave below sounds", sub > -40, f"130.8 Hz at {sub:.1f} dB relative to 261.6 Hz")
 
 
+def options(path):
+    x = load(path)
+    for name, t, want_decay in (("pluck decay 1.2 s with P", 700, True), ("decay on all notes, P off", 3600, True),
+                                ("decay off: the note sustains", 6300, False)):
+        d = rms_db(seg(x, t + 150, t + 250)) - rms_db(seg(x, t + 1250, t + 1350))
+        ok_ = d > 25 if want_decay else abs(d) < 3
+        check(name, ok_, f"{d:.1f} dB down between 0.2 s and 1.3 s")
+
+
 if __name__ == "__main__":
     if sys.argv[1] == "core":
         core(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else None)
+    elif sys.argv[1] == "options":
+        options(sys.argv[2])
     else:
         stage4(sys.argv[2])
     print("ALL PASS" if ok else "SOME FAILED")

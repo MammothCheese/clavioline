@@ -56,7 +56,7 @@ Two parts of the drawing are simplified:
 | Part | On the chip | Difference from the drawing |
 |---|---|---|
 | C5, the 0.02 µF coupling capacitor | A first-order high-pass at 71 Hz on the source; R5 moves to the network input | Within 0.8 dB from the lowest note (87 Hz) up |
-| C17, the V tablet's 100 pF (with R29, R30) | Left out while V is up; it then sits behind 3 MΩ | Within 0.04 dB |
+| C17, the V tablet's 0.1 µF (with R29, R30) | Left out while V is up; it then sits behind 3 MΩ | Within 0.07 dB |
 
 Both remove a state and a node from every step. `tools/clav_net_ref.py` models the network as the chip runs it, and
 `full=True` gives it as drawn.
@@ -95,6 +95,7 @@ Change any value, then run `python3 tools/gen_clav_tables.py` and rebuild.
 | Value | Setting | Source |
 |---|---|---|
 | All capacitors and resistors of Fig. 4 | as drawn | Printed |
+| C17 (tablet V) | 0.1 µF | Concert (read as ".1"); the 1952 "100pF" label would make V inaudible ([HISTORY.md](HISTORY.md)) |
 | Control valve anode load, coupling capacitor | 100 kΩ, 0.02 µF | Concert |
 | L5 | 15 H, 1 kΩ copper, 2 MΩ core loss | **Estimate**: puts tablets 1 / 2 near 290 / 580 Hz |
 | L4 + L2, L1, L3 | 2 H each, coupling 0.95, 200 Ω copper, 60 kΩ core loss | **Estimate**: puts tablets 3 / 4 near 800 / 460 Hz, A near 800 Hz, 5 / 6 near 1.1 / 1.6 kHz |
@@ -120,6 +121,19 @@ Change any value, then run `python3 tools/gen_clav_tables.py` and rebuild.
 | Amplifier | d = 0.35 | **Estimate** ("a large amount of distortion is deliberately obtained") |
 | Pitch | the FM-1's F3 key = F3 with the coupler at MED | **Estimate** |
 
+## Options (not on the original)
+
+**SEQ** opens the options page; **SEQ** or **HOME** closes it. **SELECT** chooses a setting and **KNOB 1** changes it.
+The keys keep playing, so you hear each change. The settings are saved with the others.
+
+| Setting | Values | What it does |
+|---|---|---|
+| PLUCK DECAY | OFF, 0.3, 0.6, 1.2, 2.5 s | Each key press starts the note at full level, then it fades 40 dB over the time chosen. This stands in for flicking the knee lever back after each note, which is how the original made plucked sounds |
+| DECAY ON | P NOTES, ALL NOTES | Only while tablet P is down, or on every note |
+
+The decay is a gain on the network's output, before the valve stage. On the original, pulling the lever back also
+darkened the tone, because the lever sits inside the network; this simpler fade does not.
+
 ## Tests
 
 ```sh
@@ -140,6 +154,7 @@ them:
 | Vibrato I / II / III | 4.49 / 5.52 / 6.49 Hz; deep / shallow depth 3.78 |
 | Sub I f | the octave below at the level of the fundamental |
 | STOPS mode note buttons | SEL plays D4 (293.7 Hz) |
+| Pluck decay 1.2 s (with P, and on all notes) | 36.7 dB down from 0.2 s to 1.3 s; off: 0.0 dB |
 | Chip network against the exact analysis | within 0.14 dB at 22.05 kHz (0.31 dB at 44.1 kHz) |
 
 `tests/run_tests.sh` adds the platform's update-path tests (the installer, the update loader) after a firmware build.

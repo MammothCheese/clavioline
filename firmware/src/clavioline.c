@@ -59,6 +59,10 @@ static const uint32_t VIB_INC[3] = {112195064u, 137127301u, 162059537u};   /* 4.
 static volatile uint32_t a_inc;                 /* main -> ISR: phase step of the sounding note */
 static volatile uint32_t a_held;                /* main -> ISR: a key (or MIDI note) is down */
 static volatile uint32_t a_tabs;                /* main -> ISR: the tablets (P, vibrato, sub-octaves) */
+static volatile uint32_t a_decay, a_decay_all;  /* main -> ISR: the pluck decay (Q30 per step, 0 = off), on all notes */
+static volatile uint32_t a_pluck;               /* main -> ISR: counts key presses (each restarts the decay) */
+/* OPTIONS (not on the original): the pluck decay, 40 dB down in 0.3 / 0.6 / 1.2 / 2.5 s; per 22.05 kHz step, Q30 */
+static const uint32_t DECAY_Q30[4] = {1072994576u, 1073368135u, 1073554963u, 1073652127u};
 static volatile uint32_t a_sounding;            /* ISR -> main: something can still be heard */
 static volatile uint32_t a_load, a_load_peak;   /* ISR -> main: render time, per mille of the block (peak held) */
 #define HALF_FRAMES_TICKS (256u * 1000000u / 44100u * FM1_TICKS_PER_US)   /* one 256-frame block, 24 MHz ticks */
@@ -74,9 +78,9 @@ static net_state_t net_st;
 static struct {
     uint32_t ph, held, pend_on, pend_off, lfo, sub;
     int32_t run, stopping, gate, fade, carry, dcx, dcy, xfade, xdir, g, gstep, yh[4], hp, hpx;
-    uint32_t quiet, idle;
+    uint32_t quiet, idle, pluck, env;           /* env: the pluck decay, Q30 */
     int32_t x[3];                               /* V2 cathode network, Q30: 1 = cut off, 0 = conducting */
-} au = {.x = {1 << 30, 1 << 30, 1 << 30}, .xfade = 32767};
+} au = {.x = {1 << 30, 1 << 30, 1 << 30}, .xfade = 32767, .env = 1u << 30};
 
 static int32_t sine(uint32_t ph)                /* a full cycle over 2^32 -> -32767..32767 (Dinghy's) */
 {
@@ -119,7 +123,7 @@ static int32_t valve(int32_t y)                 /* the amplifier: mostly 2nd har
  * the valve amplifier and the DC blocker run. After 100 ms of silence it rests and costs nothing. */
 static void app_audio(int32_t *out, uint32_t n)
 {
-    uint32_t i, k, tabs = a_tabs, held = a_held, h, m, invi, c[4], inc = a_inc, inc2;
+    uint32_t i, k, tabs = a_tabs, held = a_held, h, m, invi, c[4], inc = a_inc, inc2, decay;
     int32_t S, ds[4], sounding = 0, am = 32767, s1, s2;
     const net_coef_t *nc;
     uint32_t t0 = fm1_ticks();
@@ -154,6 +158,12 @@ static void app_audio(int32_t *out, uint32_t n)
         au.lfo += VIB_INC[k];
         inc += (uint32_t)(((int64_t)inc * ((d * sv) >> 15)) >> 16);
         am = 32767 + ((VIB_AM_Q15 * sv) >> 15);
+    }
+    if (a_pluck != au.pluck) { au.pluck = a_pluck; au.env = 1u << 30; }   /* (OPTIONS) a key press: full again */
+    {
+        uint32_t dk = a_decay;
+        decay = dk && (a_decay_all || (tabs & TB(T_P))) ? dk : 0u;
+        if (!decay) au.env = 1u << 30;
     }
     s1 = (tabs & TB(T_SUB1F) ? SUB_F : 0) + (tabs & TB(T_SUB1P) ? SUB_P : 0);
     s2 = (tabs & TB(T_SUB2F) ? SUB_F : 0) + (tabs & TB(T_SUB2P) ? SUB_P : 0);
@@ -248,6 +258,7 @@ static void app_audio(int32_t *out, uint32_t n)
         }
         au.yh[0] = au.yh[1]; au.yh[1] = au.yh[2]; au.yh[2] = au.yh[3];
         au.yh[3] = net_step(&net_st, nc, v * NET_ISRC_MUL);   /* the tone-forming network, knee lever inside */
+        if (decay) au.env = (uint32_t)(((uint64_t)au.env * decay) >> 30);   /* (OPTIONS) the pluck decay */
 
         for (j = 0; j < 2u; j++) {              /* two output samples: the network's, then the half-band midpoint */
             if (!j) y = au.yh[1];
@@ -260,6 +271,7 @@ static void app_audio(int32_t *out, uint32_t n)
             }
             yi = yi > 60000 ? 60000 : yi < -60000 ? -60000 : yi;
             yi = (yi * au.xfade) >> 15;
+            yi = (yi * (int32_t)(au.env >> 15)) >> 15;
             yi = valve(yi);
             au.dcy += yi * 256 - au.dcx - (au.dcy >> 9);   /* DC blocker, ~14 Hz, Q8 */
             au.dcx = yi * 256;
@@ -300,8 +312,9 @@ static struct {
     uint32_t tabs;
     uint16_t preset; uint16_t pad;
     setup_t user[NUSER];
+    uint8_t decay, decay_all, pad2[2];          /* OPTIONS: the pluck decay (0 = off, 1..4), on all notes */
 } set;
-#define SET_VER 2u
+#define SET_VER 3u
 
 static uint32_t lever = 48;                     /* the knee lever (not saved): 3/4 open at power-on */
 static uint8_t cnt[128];                        /* how many keys / MIDI notes / the drone hold each note */
@@ -402,11 +415,16 @@ static void cv_tablet(int32_t x, int32_t y, int32_t w, int32_t h, uint16_t band,
     cv_text(x + (w - text_w(&FONT_S, lab)) / 2, y + (h - 16) / 2 + 2, &FONT_S, lab, C_INK);
 }
 
-static void draw_title(uint32_t stops)          /* stars, the title, a satellite with its antennae, an orbit line */
+static void draw_title_text(const char *t, uint16_t colour);
+static void draw_title(uint32_t stops)
+{
+    draw_title_text(stops ? "STOPS" : "CLAVIOLINE", stops ? C_ORANGE : C_IVORY);
+}
+
+static void draw_title_text(const char *t, uint16_t colour)   /* stars, the title, a satellite, an orbit line */
 {
     static const uint8_t STARS[][2] = {{6, 6}, {30, 30}, {52, 4}, {74, 33}, {98, 2}, {121, 35}, {145, 5}, {168, 31},
                                        {190, 3}, {212, 28}, {234, 9}, {14, 22}, {226, 34}, {110, 18}};
-    const char *t = stops ? "STOPS" : "CLAVIOLINE";
     int32_t i, tw = text_w(&FONT_L, t), x = (240 - tw) / 2 + 10;
     cv_begin(240, 40, C_NAVY);
     for (i = 0; i < (int32_t)(sizeof STARS / sizeof STARS[0]); i++) {
@@ -421,7 +439,7 @@ static void draw_title(uint32_t stops)          /* stars, the title, a satellite
         cv_rect(sx - 6, sy - 1, 13, 2, C_TEAL);
         cv_pset(sx - 2, sy - 3, C_IVORY);
     }
-    cv_text(x, 3, &FONT_L, t, stops ? C_ORANGE : C_IVORY);
+    cv_text(x, 3, &FONT_L, t, colour);
     cv_line(x, 37, x + tw, 37, C_TEAL);
     cv_rect(x + tw + 3, 36, 3, 3, C_ORANGE);
     cv_blit(0, 0);
@@ -539,6 +557,32 @@ static void draw_status(const char *msg, uint16_t colour)
     cv_blit(0, 218);
 }
 
+#define NOPT 2u
+static void draw_options(uint32_t sel)          /* OPTIONS: settings the original did not have */
+{
+    static const char *const NAME[NOPT] = {"PLUCK DECAY", "DECAY ON"};
+    static const char *const DEC[5] = {"OFF", "0.3 S", "0.6 S", "1.2 S", "2.5 S"};
+    uint32_t i;
+    draw_title_text("OPTIONS", C_TEAL);
+    for (i = 0; i < NOPT; i++) {
+        const char *v = i == 0u ? DEC[set.decay] : set.decay_all ? "ALL NOTES" : "P NOTES";
+        int32_t on = i == sel;
+        cv_begin(240, 44, C_NAVY);
+        if (on) { cv_rect(4, 2, 232, 40, C_PANEL); cv_rect(4, 2, 3, 40, C_TEAL); }
+        cv_text(16, 4, &FONT_S, NAME[i], on ? C_IVORY : C_FAINT);
+        cv_disc(22, 30, 3, on ? C_ORANGE : C_PANEL);
+        cv_text(34, 22, &FONT_S, v, on ? C_ORANGE : C_FAINT);
+        cv_blit(0, 48 + (int32_t)i * 48);
+    }
+    cv_begin(240, 64, C_NAVY);                  /* (a canvas holds at most 240 x 64) */
+    cv_text(12, 0, &FONT_S, "NOT ON THE ORIGINAL", C_FAINT);
+    cv_text(12, 18, &FONT_S, "SELECT  CHOOSE", C_CHROME);
+    cv_text(12, 33, &FONT_S, "KNOB 1  CHANGE", C_CHROME);
+    cv_text(12, 48, &FONT_S, "SEQ     BACK", C_CHROME);
+    cv_blit(0, 154);
+    lcd_fill(0, 218, 240, 22, C_NAVY);
+}
+
 static char *put_pct(char *p, uint32_t pm)      /* per mille -> "nn%" */
 {
     uint32_t v = (pm + 5u) / 10u;
@@ -558,7 +602,7 @@ static void midi_in(void)
     uint8_t st, d1, d2;
     while (midi_get(&st, &d1, &d2) != 0) {      /* all channels */
         uint32_t ty = st & 0xF0u;
-        if (ty == 0x90u && d2) { note_add(d1); midi_dirty = 1; }
+        if (ty == 0x90u && d2) { note_add(d1); a_pluck++; midi_dirty = 1; }
         else if (ty == 0x80u || ty == 0x90u) { note_del(d1); midi_dirty = 1; }
         else if (ty == 0xB0u && d1 == 11u) {    /* CC 11 expression: the knee lever */
             lever = ((uint32_t)d2 * LEVER_MAX + 63u) / 127u;
@@ -585,13 +629,13 @@ static void app_main(void)
     uint32_t net_tabs = ~0u, net_lever = ~0u, t_msg = 0, t_cpu = 0, cpu_over = 0, tnotes = 0;
     char cpu_txt[40] = "CPU";
     uint32_t drawn_note = ~0u, drawn_lever = ~0u, drawn_cpl = ~0u, drawn_st = ~0u, drawn_tabs = ~0u, drawn_pre = ~0u;
-    uint32_t drawn_stops = ~0u;
+    uint32_t drawn_stops = ~0u, drawn_opt = ~0u, opts = 0, osel = 0;
     const char *msg = 0;
     uint8_t key_note[27] = {0};
     uint32_t kon = 0;                           /* keys whose note is in the stack */
 
     if (settings_load(&set, sizeof set) || set.ver != SET_VER || set.coupler < -1 || set.coupler > 1 || set.window > 1u
-        || set.tune < -50 || set.tune > 50 || set.preset >= NPRESET) {
+        || set.tune < -50 || set.tune > 50 || set.preset >= NPRESET || set.decay > 4u || set.decay_all > 1u) {
         memset(&set, 0, sizeof set);
         set.ver = SET_VER;
         for (k = 0; k < NUSER; k++) set.user[k].tabs = 0;
@@ -627,16 +671,22 @@ static void app_main(void)
                 continue;
             }
             if (up >> k & 1u && kon >> k & 1u) { note_del(key_note[k]); kon &= ~(1u << k); midi_send(0x80u, key_note[k], 0); changed = 1; }
-            if (down >> k & 1u) { key_note[k] = (uint8_t)(base + k); note_add(key_note[k]); kon |= 1u << k; midi_send(0x90u, key_note[k], 100); changed = 1; }
+            if (down >> k & 1u) { key_note[k] = (uint8_t)(base + k); note_add(key_note[k]); kon |= 1u << k; a_pluck++; midi_send(0x90u, key_note[k], 100); changed = 1; }
         }
 
         b = fm1_input_edges(&rel);
         if (stops) {                            /* FX SEL ENV LFO EDIT play C4 D4 E4 F4 G4, to try the tablets */
             for (k = 0; k < 5u; k++) {
                 if (rel >> TEST_BTN[k] & 1u && tnotes >> k & 1u) { note_del(TEST_NOTE[k]); tnotes &= ~(1u << k); changed = 1; }
-                if (b >> TEST_BTN[k] & 1u && !(tnotes >> k & 1u)) { note_add(TEST_NOTE[k]); tnotes |= 1u << k; changed = 1; }
+                if (b >> TEST_BTN[k] & 1u && !(tnotes >> k & 1u)) { note_add(TEST_NOTE[k]); tnotes |= 1u << k; a_pluck++; changed = 1; }
             }
             b &= ~(1u << BTN_FX | 1u << BTN_SEL | 1u << BTN_ENV | 1u << BTN_LFO | 1u << BTN_EDIT);
+        }
+        if (b & (1u << BTN_SEQ) || (opts && b & (1u << BTN_HOME))) {     /* OPTIONS (not on the original) */
+            opts = b & (1u << BTN_SEQ) ? !opts : 0;
+            b &= ~(1u << BTN_HOME);
+            lcd_fill(0, 0, 240, 240, C_NAVY);
+            drawn_stops = drawn_tabs = drawn_pre = drawn_note = drawn_cpl = drawn_lever = drawn_st = drawn_opt = ~0u;
         }
         if (b & (1u << BTN_GLO) || (stops && b & (1u << BTN_HOME))) {   /* PLAY <-> STOPS */
             uint32_t was = stops;
@@ -655,7 +705,7 @@ static void app_main(void)
         }
         if (stops && b & (1u << BTN_PLAY)) {    /* the drone: hold the last note while editing */
             if (drone) { note_del(drone_note); drone = 0; }
-            else if (last_note >= 0) { drone_note = (uint32_t)last_note; note_add(drone_note); drone = 1; }
+            else if (last_note >= 0) { drone_note = (uint32_t)last_note; note_add(drone_note); a_pluck++; drone = 1; }
             changed = 1;
         }
         if (b & (1u << BTN_OCT_DOWN) && set.coupler > -1) { set.coupler--; edited = 1; dirty = 1; changed = 1; t_change = fm1_ms; }
@@ -670,7 +720,13 @@ static void app_main(void)
                 msg = "SELECT A USER SLOT FIRST"; t_msg = fm1_ms;
             }
         }
-        if ((e = fm1_enc_take(ENC_SELECT)) != 0) {
+        if (opts && (e = fm1_enc_take(ENC_SELECT)) != 0) osel = (osel + (e > 0 ? 1u : NOPT - 1u)) % NOPT;
+        if (opts && (e = fm1_enc_take(ENC_KNOB1)) != 0) {
+            if (osel == 0u) { int32_t d = (int32_t)set.decay + e; set.decay = (uint8_t)(d < 0 ? 0 : d > 4 ? 4 : d); }
+            else set.decay_all ^= 1u;
+            dirty = 1; t_change = fm1_ms;
+        }
+        if (!opts && (e = fm1_enc_take(ENC_SELECT)) != 0) {
             int32_t p = (int32_t)set.preset + e;
             while (p < 0) p += (int32_t)NPRESET;
             apply_preset((uint32_t)p % NPRESET);
@@ -681,7 +737,7 @@ static void app_main(void)
             set.window = (uint8_t)(w < 0 ? 0 : w > 1 ? 1 : w);
             dirty = 1; t_change = fm1_ms;
         }
-        if ((e = fm1_enc_take(ENC_KNOB1)) != 0) {
+        if (!opts && (e = fm1_enc_take(ENC_KNOB1)) != 0) {
             int32_t t = set.tune + e;
             set.tune = (int8_t)(t < -50 ? -50 : t > 50 ? 50 : t);
             dirty = 1; changed = 1; t_change = fm1_ms;
@@ -696,6 +752,8 @@ static void app_main(void)
         midi_in();
         if (changed || midi_dirty) { midi_dirty = 0; update_voice(); }
         a_tabs = set.tabs;
+        a_decay = set.decay ? DECAY_Q30[set.decay - 1u] : 0u;
+        a_decay_all = set.decay_all;
 
         /* a new network when the tablets or the lever moved (and the ISR has taken the last one) */
         if (!net_pending && ((set.tabs & NET_TABS) != net_tabs || lever != net_lever)) {
@@ -723,6 +781,7 @@ static void app_main(void)
             for (k = 0; k < 5u; k++) { fm1_led_key_glow(TEST_BTN[k], 0); fm1_led_key(TEST_BTN[k], 0); }
         }
         fm1_led_key(BTN_GLO, stops);
+        fm1_led_key(BTN_SEQ, opts);
         fm1_led_key(BTN_PLAY, drone);
 
         if (msg && fm1_ms - t_msg > 1500u) { msg = 0; drawn_st = ~0u; }
@@ -742,6 +801,10 @@ static void app_main(void)
             if (stops || cpu_over) drawn_st = ~0u;
         }
         idle_ok = 1;
+        if (opts) {
+            uint32_t st = osel | (uint32_t)set.decay << 4 | (uint32_t)set.decay_all << 8;
+            if (st != drawn_opt) { drawn_opt = st; draw_options(osel); }
+        } else {
         if (stops != drawn_stops) { drawn_stops = stops; draw_title(stops); drawn_st = ~0u; }
         if (set.tabs != drawn_tabs) { drawn_tabs = set.tabs; draw_rail(); }
         if ((set.preset | edited << 15) != drawn_pre) { drawn_pre = set.preset | edited << 15; draw_preset(); }
@@ -757,6 +820,7 @@ static void app_main(void)
         } else if (!msg && ((uint32_t)set.window | (uint32_t)(set.tune + 50) << 1) != drawn_st) {
             drawn_st = (uint32_t)set.window | (uint32_t)(set.tune + 50) << 1;
             draw_status(0, C_CHROME);
+        }
         }
         idle_ok = 0;
 

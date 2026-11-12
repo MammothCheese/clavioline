@@ -46,6 +46,7 @@ silence starts the same way.
 | SELECT | Presets (see below) | The voicing card |
 | GLO | STOPS mode: all the tablets, including vibrato, P and the sub-octaves | The tablet rail |
 | SAVE | Store the current tablets and coupler in the user slot shown | |
+| SEQ | Options: settings the original did not have (see below) | |
 | KNOB 1 | Fine tuning, ±50 cents | The tuning control |
 
 Plucked sounds work as on the original. Choose Banjo, Mandolin or Harpsichord (they have **P** down), then flick the
@@ -75,6 +76,14 @@ The bottom line shows the audio engine's CPU load.
 - **P** shortens the attack. The control valve then opens fast enough that its current step rings the tone network:
   a short percussive ping at the start of each note, coloured by the tablets that are down.
 - **Sub I / Sub II** add the octave and the two octaves below, softly (**p**) or loudly (**f**). They come from the Concert model.
+
+### Options
+
+**SEQ** opens a page of settings that the original did not have. **SELECT** chooses one, **KNOB 1** changes it, and
+**SEQ** goes back.
+- **PLUCK DECAY** (off, 0.3, 0.6, 1.2 or 2.5 s): every key press starts at full level and fades away. The original
+  needed a flick of the knee lever for this, which is awkward on the PRESETS knob.
+- **DECAY ON**: only on notes with tablet **P** down, or on all notes.
 
 ### Presets
 

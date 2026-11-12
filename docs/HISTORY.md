@@ -83,7 +83,7 @@ The traced netlist, with every printed value:
 source   control valve anode (100 kΩ load, Concert) --0.02 µF (Concert)-- IN
 IN-OUT   C30 100 pF, always;  + C24 200 pF (7), C25 0.005 µF (8), C26 0.015 µF (9)
 IN       C28 0.001 µF to ground;  R31 20 kΩ + C29 0.05 µF to ground;  R32 knee lever to ground
-         C17 100 pF + R29 5 kΩ to ground when V is down (R30 3 MΩ otherwise)
+         C17 0.1 µF (see below) + R29 5 kΩ to ground when V is down (R30 3 MΩ otherwise)
 IN-NB    L4 + L2              NB   C27 0.02 µF to ground (A);  short to ground (B)
 NB-N1    L1                   N1   R26 250 kΩ ∥ C20 0.005 µF (3);  R27 250 kΩ ∥ C21 0.015 µF (4)
                                    C18 0.02 µF (1);  C19 0.005 µF (2)
@@ -120,6 +120,20 @@ Read as one continuous row, everything falls into place:
   been inert, contradicting two independent Selmer tables.
 
 The row is treated as one node.
+
+#### Tablet V's capacitor
+
+The 1952 drawing has a "100pF" label beside C17, but with 100 pF across a node of about 16 kΩ, V changes nothing
+audible (0.1 dB). Selmer's Violin card offers "O or V" as alternatives, so on the real instrument V clearly did
+something. On the Concert drawing, V's capacitor reads ".1", which is 0.1 µF. With that value, V softens the upper
+harmonics as a gentler alternative to O and drops the level about 10 dB on its own. This firmware uses 0.1 µF.
+
+#### Tablet A
+
+A puts 0.02 µF from the coil tap (between L2 and L1) to ground. That makes a low-pass section in the middle of the
+ladder, and with the estimated coils it changes some harmonics by up to 7 dB, as much as tablets 2 or 3. How strong it
+really was depends on the coil values, which no document gives. None of Selmer's voicings use A, so nothing pins it
+down further.
 
 #### What is not in any document
 
