@@ -109,6 +109,7 @@ Change any value, then run `python3 tools/gen_clav_tables.py` and rebuild.
 |---|---|---|
 | Attack time constants | 19.2 ms; 1.54 ms with P | Derived from the printed cathode network |
 | Valve turn-on curve | gain e^(−v/0.12) | **Estimate** (remote-cut-off valve) |
+| Control valve standing current | as large as the signal swing; it opens with the gate, so a fast opening (P) rings the tone network: the percussive transient | Effect printed ("a definite transient", 1952; "an impact or percussion effect", patent); **size estimated** |
 | Key contact delays | oscillator 3 ms before the gate; gate closes 4 ms before the oscillator stops | **Estimate** |
 | Trapezoid | 50 % duty, 100 µs edges | Duty from "similar to a square wave"; **edge estimated** |
 | Sub I / II levels | f = the main tone's level, p = 10 dB softer | **Estimate** |
@@ -132,7 +133,8 @@ them:
 |---|---|
 | Pitch of C4 and C5, highest-note priority, return to the held note, coupler | within ±0.2 cents |
 | Legato note change | no new attack (0.6 dB level change) |
-| Attack to −40 / −20 / −3 dB | 12 / 26 / 62 ms; with P 2 / 4 / 6 ms |
+| Attack to −40 / −20 / −3 dB | 14 / 28 / 62 ms; with P 2 / 2 / 6 ms |
+| Start of a note: first 40 ms peak against the steady peak | 0.35 without P; 1.24 with P (Trumpet), 2.3 (Harpsichord, Mandolin) |
 | Knee lever from step 48 to 8 | −38 dB |
 | Aliasing on a 3136 Hz note | −39.6 dB below the harmonics |
 | Vibrato I / II / III | 4.49 / 5.52 / 6.49 Hz; deep / shallow depth 3.78 |

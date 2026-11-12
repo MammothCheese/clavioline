@@ -40,6 +40,11 @@ static void app_idle(void);
 #define EDGE_K_Q16 144507u                      /* trapezoid edge: t_e * FS / 2, Q16; t_e = 100 us. ESTIMATE ("trapezoidal": visible slopes) */
 #define SUB_F 12000                             /* Sub I / II "f": as loud as the main tone. ESTIMATE */
 #define SUB_P 3795                              /* "p": 10 dB softer. ESTIMATE */
+#define V2_DC 12000                             /* the control valve's standing anode current, as large as the signal
+                                                 * swing (a valve clipping the trapezoid between cut-off and full
+                                                 * conduction: ESTIMATE). Opening fast (tablet P), its step rings the
+                                                 * tone network: the "definite transient" (1952), "an impact or
+                                                 * percussion effect" (patent) */
 #define T_ON 66u                                /* key contact 1 (oscillator) to contact 2 (gate): 3 ms at 22.05 kHz. ESTIMATE */
 #define T_OFF 88u                               /* on release, contact 2 opens 4 ms before contact 1. ESTIMATE */
 #define FADE_STEP 744                           /* oscillator stop: 2 ms fade against a click (not historical) */
@@ -233,8 +238,8 @@ static void app_audio(int32_t *out, uint32_t n)
             }
             v = (v * au.fade) >> 15;            /* (|v| < 45000: 32-bit products) */
         }
-        v = (v * g) >> 15;                      /* the control valve */
-        v = (v * am) >> 15;
+        v = (v * am) >> 15;                     /* (vibrato's small AM is on the oscillator, V1) */
+        v = ((v + V2_DC) * g) >> 15;            /* the control valve: its standing current opens with the signal */
         {                                       /* C5, the coupling capacitor: a first-order high-pass */
             int32_t hp = ((au.hp + v - au.hpx) * HP_A_Q13) >> 13;
             au.hpx = v;

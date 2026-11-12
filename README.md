@@ -72,7 +72,8 @@ The bottom line shows the audio engine's CPU load.
 
 - **1–9, O, A, B, V** switch the coils and capacitors of the tone-forming network. They combine as in the real circuit:
   each changes what the others do, rather than adding a fixed EQ curve.
-- **P** shortens the attack.
+- **P** shortens the attack. The control valve then opens fast enough that its current step rings the tone network:
+  a short percussive ping at the start of each note, coloured by the tablets that are down.
 - **Sub I / Sub II** add the octave and the two octaves below, softly (**p**) or loudly (**f**). They come from the Concert model.
 
 ### Presets
