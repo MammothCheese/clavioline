@@ -16,9 +16,11 @@ else is about shaping that tone:
 
 The firmware is built from the original circuit diagrams. The diagrams were traced wire by wire into a computer model of the circuit. That model was then solved on a PC for all 8,192 tablet combinations, and the FM-1 plays back the result: compact filters that reproduce what the circuit does for each combination. The FM-1's small processor could not run the full circuit live, but this way the tablets still interact exactly as the model says.
 
-Some parts of the original are not in any known surviving document: the coils' values, the oscillator's exact wave shape,
+Some parts of the original were not found in any sources: the coils' values, the oscillator's exact wave shape,
 the amount of amplifier distortion and the speaker's sound. Those are estimates, refined by comparing the firmware
 against a recording of a real Clavioline.
+
+Read more about the history of the Clavioline and the process of building this firmware in [docs/HISTORY.md](docs/HISTORY.md).
 
 ## Playing
 
@@ -110,7 +112,7 @@ A `*` after the name means you have changed something since choosing it.
    code is marked as printed in a source, worked out from one, or estimated.
 2. **Reading the circuit.** The tone network's diagram was traced wire by wire from high-resolution scans, and the
    oscillator, attack, vibrato and amplifier circuits were worked through from their printed values. A few unclear
-   spots in the drawings had to be judged; [docs/HISTORY.md](docs/HISTORY.md) explains each one.
+   spots in the drawings had to be judged.
 3. **A first, literal version.** The first firmware simulated the whole circuit on the FM-1 as it ran.
 4. **Making it fit.** The network was solved on a PC for every tablet combination and stored as compact filters,
    which costs the FM-1 a fraction of the processing.
