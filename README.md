@@ -31,7 +31,7 @@ silence starts the same way.
 
 | Control | What it does | On the original |
 |---|---|---|
-| Keys | Play. MIDI notes in (USB or the TRS jack) play too | The 36-key keyboard, F to E |
+| Keys | Play | The 36-key keyboard, F to E |
 | GLO | STOPS mode: all the tablets, including vibrato, P and the sub-octaves | The tablet rail |
 | **PRESETS** knob | **Knee lever**: the expression swell. Turn quickly for big moves, slowly for small ones. Fully left is silent. MIDI CC 11 moves it too | The lever under the keyboard, pushed with the knee |
 | MASTER | Volume | The amplifier |
@@ -40,10 +40,7 @@ silence starts the same way.
 | SELECT | Presets (see below) | The voicing card |
 | SAVE | Store the current tablets and coupler in the user slot shown | |
 | SEQ | Options: pluck decay, knee lever speed, portamento (see below) | |
-| KNOB 1 | Fine tuning, ±50 cents | The tuning control |
-
-Plucked sounds work as on the original. Choose Banjo, Mandolin or Harpsichord (they have **P** down), then flick the
-knee lever up and back down for each note. Bowed swells are a slow push and release.
+| KNOB 1 | Fine tuning | The tuning control |
 
 ### The tablets
 
@@ -69,13 +66,11 @@ is why a short list of switches could imitate violins, oboes, trumpets and organ
 ### STOPS mode: the tablets
 
 Press **GLO** and the keyboard becomes the row of tablets. Each key turns one on or off, and its LED shows which are
-down. **GLO** or **HOME** goes back to playing; nothing is lost.
+down. **GLO** or **HOME** goes back to playing.
 
 To hear the tablets while you set them:
 - **FX, SEL, ENV, LFO, EDIT** play **C4, D4, E4, F4, G4** for as long as you hold them; their lights glow in STOPS mode.
 - **PLAY** holds the last note as a drone.
-
-The bottom line shows the audio engine's CPU load.
 
 ```
  black keys:    F#3  G#3  A#3   C#4                         A#4   C#5   D#5   F#5
@@ -84,9 +79,6 @@ The bottom line shows the audio engine's CPU load.
  white keys: F3  G3  A3  B3  C4  D4  E4  F4  G4  A4  B4  C5  D5  E5  F5
               1   2   3   4   5   6   7   8   9   O   A   B   V   P   (all off)
 ```
-
-With **P** down, each note starts with a sharp peak that falls about 10 dB within 40 ms, then sustains while you hold
-the key. Without P, notes swell in gently. The peak's shape was matched to a recording of a real Clavioline.
 
 ### Options
 
@@ -113,29 +105,18 @@ A `*` after the name means you have changed something since choosing it.
 
 ## Development
 
-The project worked like restoring an instrument that no longer exists, from its paperwork and a recording.
-
-1. **Research.** The 1952 article, the patent, a Selmer factory drawing of the Concert model, a 2007 magazine history
+1. **Research.** A 1952 _Electronic Engineering_ article, the original patent, a Selmer factory drawing of the Concert model, a 2007 magazine history
    and a restorer's notes were gathered and compared. The rule throughout: never invent a value. Every number in the
    code is marked as printed in a source, worked out from one, or estimated.
 2. **Reading the circuit.** The tone network's diagram was traced wire by wire from high-resolution scans, and the
    oscillator, attack, vibrato and amplifier circuits were worked through from their printed values. A few unclear
    spots in the drawings had to be judged; [docs/HISTORY.md](docs/HISTORY.md) explains each one.
-3. **A first, literal version.** The first firmware simulated the whole circuit on the FM-1 as it ran. It proved the
-   reading of the circuit was right, but it used most of the processor and still did not sound like a Clavioline.
-4. **Finding what was missing.** A careful audit against the article showed the gaps were around the network, not in
-   it: the oscillator's wave shape, the deliberately distorting amplifier and the speaker cabinet. Those were added.
-5. **Making it fit.** The network is now solved on a PC for every tablet combination and stored as compact filters,
+3. **A first, literal version.** The first firmware simulated the whole circuit on the FM-1 as it ran.
+4. **Making it fit.** The network was solved on a PC for every tablet combination and stored as compact filters,
    which costs the FM-1 a fraction of the processing.
-6. **Testing.** The firmware also runs on a PC from scripted performances, and automatic checks measure the result:
-   tuning, vibrato speeds, attack times, the filters against the circuit model. Every change has to pass before it
-   goes to the keyboard. A GitHub Actions build then makes the installable file.
-7. **Listening against a real Clavioline.** Vintage Keys Studio's video of a working Clavioline gave a reference.
+5. **Listening against a real Clavioline.** Vintage Keys Studio's video of a working Clavioline gave a reference.
    Measuring it showed what tablet P's "transient" really is (a sharp peak that falls about 10 dB in 40 ms), traced to
-   a part of the circuit that had been left out. It also showed the firmware's high notes missing some brightness,
-   which was a storage error of ours and was fixed. Differences caused by the room's echo were left alone.
-8. **Playing and refining.** Each build was played on the FM-1, and the controls, presets and options were shaped by
-   what worked under the fingers.
+   a part of the circuit that had been left out.
 
 The full story is in [docs/HISTORY.md](docs/HISTORY.md).
 
