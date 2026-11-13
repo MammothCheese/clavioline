@@ -82,9 +82,9 @@ static void fm1_led_key_glow(uint32_t id, int on)   /* as fm1_led_key, the dim l
 #endif
 #ifndef FELUCCA_ID
 #if BOARD_SMK37
-#define FELUCCA_ID SMK_MODEL "_950"             /* SMK-37 Pro_99N (Elite, MKE-P37: SMK_MODEL), tools/build.py */
+#define FELUCCA_ID SMK_MODEL "_987"             /* SMK-37 Pro_987 (Elite, MKE-P37: SMK_MODEL), tools/build.py */
 #else
-#define FELUCCA_ID "FM-1_950"                   /* package identity: 95N = Clavioline build N (tools/build.py) */
+#define FELUCCA_ID "FM-1_987"                   /* package identity, as registered with the FM-1 Firmware Hub */
 #endif
 #endif
 #ifndef APP_VER

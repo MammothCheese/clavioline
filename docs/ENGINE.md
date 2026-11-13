@@ -177,7 +177,7 @@ GitHub Actions builds `clavioline.fwsc` on every push to `main` (the run's artif
 pip3 install Pillow numpy
 tools/get_toolchain.sh
 git clone --depth 1 --branch AC79NN_SDK_V1.2.1_2023-12-13 https://gitee.com/Jieli-Tech/fw-AC79_AIoT_SDK.git ~/fw-AC79_AIoT_SDK
-./build.sh                    # -> build/clavioline.fwsc (identity FM-1_950)
+./build.sh                    # -> build/clavioline.fwsc (identity FM-1_987)
 ./build.sh --release 1.0      # -> build/clavioline-1.0.fwsc
 ```
 
