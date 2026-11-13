@@ -379,11 +379,12 @@ enum { LOW = -1, MED = 0, HIGH = 1 };
 static const struct { const char *name; uint32_t tabs; int8_t coupler; } PRESET[] = {
     /* in alphabetical order. EE: Electronic Engineering, Oct. 1952, Table 1 ("Med.-High" played MED; "O or V" as two
      * presets); SOS: the Selmer voicing tables as quoted by Sound On Sound, March 2007; ORGAN SUB: the Concert's Sub I
-     * and Sub II 'f' on the raw tone, "an organ tone" (SOS) */
+     * and Sub II 'f' on the raw tone, "an organ tone" (SOS); NEW: voicings made for this firmware, not historical */
     {"ALTO SAX", T(2) | T(3) | V2, MED},                            /* SOS */
     {"ARABIAN FLUTE", T(1) | T(4) | T(8) | V1, HIGH},               /* SOS */
     {"BAGPIPE", T(1) | T(9) | V1, MED},                             /* SOS */
     {"BANJO", T(3) | T(4) | T(B) | T(P), MED},                      /* EE */
+    {"BASS GUITAR", T(3) | T(4) | T(P) | T(SUB1P), LOW},            /* NEW */
     {"BASS SAX", T(4) | V3, LOW},                                   /* SOS */
     {"BASS VIOLIN", T(1) | T(V) | V1, LOW},                         /* SOS */
     {"BASSOON", T(3) | T(7), LOW},                                  /* EE */
@@ -412,8 +413,10 @@ static const struct { const char *name; uint32_t tabs; int8_t coupler; } PRESET[
     {"REED PIPE", T(B), HIGH},                                      /* SOS */
     {"TENOR SAX", T(4) | V3, MED},                                  /* EE */
     {"THEATRE ORGAN", T(4) | V3 | AMP, MED},                        /* SOS */
+    {"THEREMIN", T(3) | T(4) | T(5) | T(O) | V1 | AMP, HIGH},       /* NEW */
     {"TROMBONE", T(3) | V2, LOW},                                   /* EE */
     {"TRUMPET", V2, MED},                                           /* EE */
+    {"TUBA", T(2) | T(3) | T(V) | T(SUB1F), LOW},                   /* NEW */
     {"VIOLA O", T(1) | T(O) | V2 | AMP, MED},                       /* EE */
     {"VIOLA V", T(1) | T(V) | V2 | AMP, MED},                       /* EE */
     {"VIOLIN O", T(1) | T(O) | V2 | AMP, HIGH},                     /* EE */
@@ -424,7 +427,7 @@ static const struct { const char *name; uint32_t tabs; int8_t coupler; } PRESET[
 #undef T
 #define NFACT (sizeof PRESET / sizeof PRESET[0])
 #define NPRESET (NFACT + NUSER)
-#define P_CLAVIOLINE 11u                        /* CLAVIOLINE TONE: every power-on starts here */
+#define P_CLAVIOLINE 12u                        /* CLAVIOLINE TONE: every power-on starts here */
 static uint32_t edited;                         /* the tablets differ from the preset shown */
 
 static void apply_preset(uint32_t i)

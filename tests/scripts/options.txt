@@ -1,7 +1,7 @@
 # OPTIONS (tests/check_engine.py options): the pluck decay
 # STOPS: vibrato II off (G#3), P on (E5); back
-# the power-on preset is CLAVIOLINE TONE: SELECT +22 = TRUMPET (the raw tone with vibrato II)
-20 enc 0 22
+# the power-on preset is CLAVIOLINE TONE: SELECT +23 = TRUMPET (the raw tone with vibrato II)
+20 enc 0 23
 50 btn 7
 60 keys 0x8
 70 keys 0

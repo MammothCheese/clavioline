@@ -1,5 +1,5 @@
 # Portamento and knee lever speed (tests/check_engine.py glide): TRUMPET, vibrato off
-20 enc 0 22
+20 enc 0 23
 50 btn 7
 60 keys 0x8
 70 keys 0

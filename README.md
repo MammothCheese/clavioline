@@ -99,11 +99,12 @@ To hear the tablets while you set them:
 
 ### Presets
 
-**SELECT** steps through 40 voicings in alphabetical order, then 4 user slots. The instrument always starts on
+**SELECT** steps through 43 voicings in alphabetical order, then 4 user slots. The instrument always starts on
 **Clavioline Tone**; your user slots and options are kept. The voicings are:
 - **17** from the 1952 *Electronic Engineering* table, from Violin to Musical Saw;
 - **22** from the Selmer voicing tables quoted by *Sound On Sound*, such as Alto Sax, Church Organ and Harpsichord;
-- **an organ tone** from the Concert's sub-octaves.
+- **an organ tone** from the Concert's sub-octaves;
+- **3 new voicings** made for this firmware (not historical): Bass Guitar, Theremin and Tuba.
 
 A `*` after the name means you have changed something since choosing it.
 

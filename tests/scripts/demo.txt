@@ -21,7 +21,7 @@
 4700 keys 0x80
 5900 keys 0
 # VIOLIN V
-6600 enc 0 26
+6600 enc 0 28
 6800 keys 0x80
 7170 keys 0x880
 7200 keys 0x800
@@ -43,7 +43,7 @@
 11000 keys 0x80
 12200 keys 0
 # OBOE
-12900 enc 0 -12
+12900 enc 0 -14
 13100 keys 0x80
 13470 keys 0x880
 13500 keys 0x800
@@ -87,7 +87,7 @@
 23600 keys 0x80
 24800 keys 0
 # TRUMPET
-25500 enc 0 17
+25500 enc 0 18
 25700 keys 0x80
 26070 keys 0x880
 26100 keys 0x800
@@ -109,7 +109,7 @@
 29900 keys 0x80
 31100 keys 0
 # CELLO
-31800 enc 0 -26
+31800 enc 0 -27
 32000 keys 0x80
 32370 keys 0x880
 32400 keys 0x800

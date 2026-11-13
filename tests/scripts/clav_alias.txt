@@ -1,6 +1,6 @@
 # a high note held: alias check. Vibrato off (STOPS, G#3), window +1, coupler HIGH: G5 key -> G7 (3136 Hz)
-# the power-on preset is CLAVIOLINE TONE: SELECT +22 = TRUMPET (the raw tone with vibrato II)
-20 enc 0 22
+# the power-on preset is CLAVIOLINE TONE: SELECT +23 = TRUMPET (the raw tone with vibrato II)
+20 enc 0 23
 50 btn 7
 60 keys 0x8
 70 keys 0
