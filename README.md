@@ -5,14 +5,46 @@
 Custom firmware that turns the FM-1 into a **Clavioline**, the valve keyboard Constant Martin invented in 1947 and
 Selmer built in England in the 1950s. It is the reedy, vibrato-laden lead voice of records like "Telstar".
 
-This is not a synthesizer "inspired by" the Clavioline. It rebuilds the original circuit:
-- the oscillator retuned by a resistor chain behind the keys;
-- the control valve that shapes each note's attack;
-- the tone-forming network of coils and capacitors that the tablets switch;
-- the knee lever, the three-speed vibrato, the Concert model's sub-octaves, and the deliberately distorting amplifier.
+The Clavioline was a small box that clipped under a piano keyboard, with its own amplifier and speaker in a separate
+cabinet. It plays one note at a time. Inside, a valve oscillator makes a single bright, buzzy tone, and everything
+else is about shaping that tone:
+- a row of **tablets** (stop switches) along the front changes the tone colour;
+- a **knee lever** under the keyboard swells the volume, played with the knee while both hands are on the keys;
+- a three-speed **vibrato**;
+- on the **Concert** model, **sub-octaves** that add one or two octaves below the note.
 
-It works from the original circuit diagrams. [docs/HISTORY.md](docs/HISTORY.md) tells how they were read and
-what had to be estimated.
+### The tablets
+
+Most tablets switch capacitors and resistors into a single network of coils that sits between the oscillator and the
+amplifier. Because it is one shared circuit, the tablets do not simply add up: each changes what the others do. That
+is why a short list of switches could imitate violins, oboes, trumpets and organs.
+
+| Tablet | What it does in the circuit | What you hear |
+|---|---|---|
+| **1, 2** | Capacitors across the coil chain; 2 tunes exactly an octave above 1 | A strong resonance (formant), low or higher |
+| **3, 4** | Capacitors with resistors; 9.5 semitones apart | Softer, broader formants |
+| **5, 6** | Capacitors on a second winding of the same coil | Colour that appears only alongside other tablets |
+| **7, 8, 9** | Capacitors that bridge round the coils, 9 the largest | More of the upper harmonics get through: brighter, more cutting |
+| **O** | A resistor across the last coil | Damps the resonances: smoother, rounder |
+| **A** | A capacitor from the middle of the coil chain to ground | Cuts upper harmonics part-way along |
+| **B** | Grounds the middle of the coil chain | Only the thin bypass path is left: a thin, reedy tone (A no longer has any effect) |
+| **V** | A capacitor at the network's input | Darkens the upper harmonics: a gentler alternative to O |
+| **P** | Shortens the control valve's delay | Each note starts with a sharp, percussive peak instead of swelling in |
+| **Vibrato I, II, III** | The vibrato oscillator's speed: 4.5, 5.5 or 6.5 Hz | |
+| **Amplitude** | Vibrato depth | Shallow or deep vibrato |
+| **Sub I, Sub II** (Concert) | Divider valves, each soft (**p**) or loud (**f**) | The octave and the two octaves below |
+
+### How faithful it is
+
+The firmware is built from the original circuit diagrams, mainly a 1952 engineering article that printed them in full.
+The diagrams were traced wire by wire into a computer model of the circuit. That model was then solved on a PC for all
+8,192 tablet combinations, and the FM-1 plays back the result: compact filters that reproduce what the circuit does
+for each combination. The FM-1's small processor could not run the full circuit live, but this way the tablets still
+interact exactly as the model says.
+
+Some parts of the original are not in any surviving document: the coils' values, the oscillator's exact wave shape,
+the amount of amplifier distortion and the speaker's sound. Those are estimates, refined by comparing the firmware
+against a recording of a real Clavioline. Every estimate is listed in [docs/ENGINE.md](docs/ENGINE.md).
 
 ## Installing
 
@@ -39,12 +71,12 @@ silence starts the same way.
 | Control | What it does | On the original |
 |---|---|---|
 | Keys | Play. MIDI notes in (USB or the TRS jack) play too | The 36-key keyboard, F to E |
+| GLO | STOPS mode: all the tablets, including vibrato, P and the sub-octaves | The tablet rail |
 | **PRESETS** knob | **Knee lever**: the expression swell. Turn quickly for big moves, slowly for small ones. Fully left is silent. MIDI CC 11 moves it too | The lever under the keyboard, pushed with the knee |
 | MASTER | Volume | The amplifier |
 | OCT− / OCT+ | Octave coupler: LOW / MED / HIGH | The transposing slider |
 | ALGORITHM | Shift the FM-1's 27 keys up an octave to reach the top of the 36-key range | |
 | SELECT | Presets (see below) | The voicing card |
-| GLO | STOPS mode: all the tablets, including vibrato, P and the sub-octaves | The tablet rail |
 | SAVE | Store the current tablets and coupler in the user slot shown | |
 | SEQ | Options: pluck decay, knee lever speed, portamento (see below) | |
 | KNOB 1 | Fine tuning, ±50 cents | The tuning control |
@@ -71,12 +103,8 @@ The bottom line shows the audio engine's CPU load.
               1   2   3   4   5   6   7   8   9   O   A   B   V   P   (all off)
 ```
 
-- **1–9, O, A, B, V** switch the coils and capacitors of the tone-forming network. They combine as in the real circuit:
-  each changes what the others do, rather than adding a fixed EQ curve.
-- **P** shortens the attack: the control valve opens at once, and each note starts with a sharp peak that falls
-  about 10 dB within 40 ms, then sustains while you hold the key. Without P, notes swell in gently. The peak's shape
-  was matched to a recording of a real Clavioline.
-- **Sub I / Sub II** add the octave and the two octaves below, softly (**p**) or loudly (**f**). They come from the Concert model.
+With **P** down, each note starts with a sharp peak that falls about 10 dB within 40 ms, then sustains while you hold
+the key. Without P, notes swell in gently. The peak's shape was matched to a recording of a real Clavioline.
 
 ### Options
 
@@ -101,33 +129,59 @@ The bottom line shows the audio engine's CPU load.
 
 A `*` after the name means you have changed something since choosing it.
 
-## How it matches the original
+## Development
 
-| The original | Here |
-|---|---|
-| Valve multivibrator, retuned by a precision resistor chain; highest key wins | A phase-accurate oscillator with highest-note priority, legato and restart-from-rest |
-| Output "trapezoidal in form", from a valve multivibrator | The multivibrator's uneven pulse (one sharp edge, one recovering), clipped by the control valve; band-limited wavetables, so it never aliases |
-| The control valve (6BA6) opens after a delay set by its cathode circuit; tablet P shortens it, so "a definite transient appears" | The printed cathode circuit simulated exactly (~19 ms, ~1.5 ms with P), plus the valve's screen-grid capacitor, whose sag gives P notes their percussive peak; fitted to a recording |
-| A network of five coils and 13 capacitor and resistor groups, switched by tablets 1–9, O, A, B, V | **A model of the whole network**, solved on a computer for all 8192 tablet combinations and stored as five resonant filters each. The tablets interact as in the circuit, because every combination comes from the full model |
-| The knee lever, a variable resistor across the network's input | The swell: the level change the model gives for each lever position |
-| Vibrato at 4.5 / 5.5 / 6.5 Hz, two depths | The same rates; depths in the ratio the circuit gives (3.8 : 1) |
-| Concert: Sub I / Sub II from divider valves, soft or loud | Square-wave dividers clocked by the oscillator |
-| An amplifier built to distort, mostly 2nd harmonic | A valve-style stage: about 18 dB of 2nd harmonic at full swell, less when softer |
-| A 10-inch speaker in the amplifier cabinet, "specially produced to add its measure" | A cabinet filter: bass resonance near 100 Hz, presence near 2.2 kHz, roll-off above 5.5 kHz |
+The project worked like restoring an instrument that no longer exists, from its paperwork and a recording.
 
-Some things are not in any surviving document: the coils' values, the oscillator's exact wave shape, the knee
-lever's taper, the vibrato's depth in cents, the amount of distortion and the speaker's response. They are estimated, and every estimate is listed in
-[docs/ENGINE.md](docs/ENGINE.md), so you can change them.
+1. **Research.** The 1952 article, the patent, a Selmer factory drawing of the Concert model, a 2007 magazine history
+   and a restorer's notes were gathered and compared. The rule throughout: never invent a value. Every number in the
+   code is marked as printed in a source, worked out from one, or estimated.
+2. **Reading the circuit.** The tone network's diagram was traced wire by wire from high-resolution scans, and the
+   oscillator, attack, vibrato and amplifier circuits were worked through from their printed values. A few unclear
+   spots in the drawings had to be judged; [docs/HISTORY.md](docs/HISTORY.md) explains each one.
+3. **A first, literal version.** The first firmware simulated the whole circuit on the FM-1 as it ran. It proved the
+   reading of the circuit was right, but it used most of the processor and still did not sound like a Clavioline.
+4. **Finding what was missing.** A careful audit against the article showed the gaps were around the network, not in
+   it: the oscillator's wave shape, the deliberately distorting amplifier and the speaker cabinet. Those were added.
+5. **Making it fit.** The network is now solved on a PC for every tablet combination and stored as compact filters,
+   which costs the FM-1 a fraction of the processing.
+6. **Testing.** The firmware also runs on a PC from scripted performances, and automatic checks measure the result:
+   tuning, vibrato speeds, attack times, the filters against the circuit model. Every change has to pass before it
+   goes to the keyboard. A GitHub Actions build then makes the installable file.
+7. **Listening against a real Clavioline.** Vintage Keys Studio's video of a working Clavioline gave a reference.
+   Measuring it showed what tablet P's "transient" really is (a sharp peak that falls about 10 dB in 40 ms), traced to
+   a part of the circuit that had been left out. It also showed the firmware's high notes missing some brightness,
+   which was a storage error of ours and was fixed. Differences caused by the room's echo were left alone.
+8. **Playing and refining.** Each build was played on the FM-1, and the controls, presets and options were shaped by
+   what worked under the fingers.
+
+The full story is in [docs/HISTORY.md](docs/HISTORY.md).
 
 ## Documentation
 
-- [docs/HISTORY.md](docs/HISTORY.md): the instrument, the sources, how the circuit was reconstructed, and the open questions.
-- [docs/ENGINE.md](docs/ENGINE.md): how the sound engine works, every parameter and estimate, the tests, and building from source.
+- [docs/HISTORY.md](docs/HISTORY.md): the instrument, the sources, how the circuit was read and the firmware made, and
+  the open questions.
+- [docs/ENGINE.md](docs/ENGINE.md): how the sound engine works, every parameter and estimate, the tests, and building
+  from source.
 - [docs/platform/](docs/platform/): the FM-1 platform's API and the chip's rules, for developers.
+
+## Sources
+
+1. G. H. Hillier, "The Clavioline", *Electronic Engineering*, October 1952, pp. 454–455. The circuit diagrams and the
+   tablet table.
+2. Selmer Electronics, "Tone Generator — Concert Clavioline", drawing DRG 1289.
+3. C. Martin, US patent 2,563,477 (filed 1948).
+4. Gordon Reid, "The Story Of The Clavioline", *Sound On Sound*, March 2007.
+5. A 1953 Gibson Clavioline restoration, antiqueradio.org.
+6. Vintage Keys Studio, ["The Joe Meek Telstar Keyboard: The Clavioline"](https://www.youtube.com/watch?v=JK0m1moewgA)
+   (YouTube). The recording the attack and tone were compared against.
+
+[docs/HISTORY.md](docs/HISTORY.md) says what each source contributed.
 
 ## Credits and licence
 
-GPL-3.0-only. The FM-1 platform is [Dinghy](https://github.com/zvenson/dinghy) by zvenson, built on Felucca by Leo Kuroshita (Hügelton Instruments)
-and its successors. See [LICENSING.md](LICENSING.md) for who made what.
+GPL-3.0-only. The FM-1 platform is [Dinghy](https://github.com/zvenson/dinghy) by zvenson, built on Felucca by Leo
+Kuroshita (Hügelton Instruments) and its successors. See [LICENSING.md](LICENSING.md) for who made what.
 
-"Clavioline" was a name used by Constant Martin and Selmer. "M-VAVE" and "FM-1" belong to their owners. This firmware is not made or endorsed by any of them.
+"Clavioline" was a name used by Constant Martin and Selmer. "M-VAVE" and "FM-1" belong to their owners. This firmware
+is not made or endorsed by any of them.

@@ -59,7 +59,8 @@ typical combination. Four sections per combination were not enough (90 % within 
 ## Tablet P, and the recording it was fitted to
 
 The 1952 article says P shortens the attack "so that a definite transient appears at the commencement of each note".
-A recorded demonstration of a Clavioline (the P section at about 1:59) shows what that transient is. Averaged over 14
+Vintage Keys Studio's video ["The Joe Meek Telstar Keyboard: The Clavioline"](https://www.youtube.com/watch?v=JK0m1moewgA)
+demonstrates a working Clavioline; its P section (about 1:59) shows what that transient is. Averaged over 14
 notes, each note:
 - rises in 4–8 ms;
 - falls 4.4 / 7.6 / 10.0 dB in the first 10 / 20 / 40 ms after its peak (consistent from note to note, within about

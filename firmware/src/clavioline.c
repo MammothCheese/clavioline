@@ -57,7 +57,8 @@ static void app_idle(void);
 /* The control valve's screen grid (Fig. 2: R4, C4, values not printed). While the valve is shut, C4 charges to the
  * full supply; when the valve opens, its screen current drains it, so the valve starts with extra gain that sags
  * to its steady value. Opening fast (tablet P) gives a sharp percussive peak; the slow normal opening only a swell.
- * Fitted to runs of P notes in a Clavioline recording (each note peaks about 16 dB over its steady level, -4.5 /
+ * Fitted to runs of P notes in Vintage Keys Studio, "The Joe Meek Telstar Keyboard: The Clavioline" (YouTube,
+ * JK0m1moewgA, about 1:59) (each note peaks about 16 dB over its steady level, -4.5 /
  * -7.5 / -9 dB after 10 / 20 / 40 ms, and re-peaks on the next note): ESTIMATES, Q30 per 22.05 kHz step. */
 #define SAG_A1 4869580                          /* drained in 10 ms at full conduction */
 #define SAG_R 749154                            /* recharged through R4 in 65 ms */

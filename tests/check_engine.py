@@ -153,7 +153,7 @@ def options(path):
 
 
 def pluck(path):
-    """runs of P notes (tests/scripts/pluck.txt), against a Clavioline recording's P demonstration: there each note
+    """runs of P notes (tests/scripts/pluck.txt), against the P demonstration in Vintage Keys Studio's Clavioline video (youtube.com/watch?v=JK0m1moewgA): there each note
     falls 7.6 dB by 20 ms and 10.0 dB by 40 ms after its peak (the mean of 14 notes)"""
     x = load(path)
     e, w = env_db(x, 2.0)

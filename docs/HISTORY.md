@@ -2,88 +2,201 @@
 
 ## The instrument
 
-Constant Martin designed the Clavioline in Versailles in 1947. It was built under licence in France, the UK (by Selmer),
-the USA (by Gibson), Germany and Italy. It is a small monophonic keyboard that clips under a piano keyboard:
-- 36 keys, three octaves from F to E, with a slider transposing one octave up or down;
-- a row of tablets (stop switches) along the front;
-- a knee lever for expression;
-- a separate cabinet holding the valve amplifier, the power supply and the loudspeaker.
+Constant Martin designed the Clavioline in Versailles in 1947. It was built under licence in France, in Britain by
+Selmer, in the USA by Gibson, and in Germany and Italy. In the 1950s and 60s it turned up everywhere from dance bands
+to pop records: the lead line of the Tornados' "Telstar" (produced by Joe Meek) is a Clavioline.
 
-The standard (Auditorium) model has 18 tablets:
-- 13 tone tablets: 1–9, O, A, B, V;
-- **P**, which sharpens the attack;
-- three vibrato speeds, I, II and III;
-- vibrato **Amplitude**.
+It is a small keyboard, three octaves from F to E, that clips under a piano keyboard. It plays one note at a time.
+Its amplifier, power supply and loudspeaker sit in a separate cabinet. The player has:
+- a slider that moves the whole keyboard an octave up or down;
+- a row of **tablets** (stop switches) along the front that set the tone colour;
+- a **knee lever** under the keyboard for swelling the volume.
 
-The **Concert** model adds four more, **Sub I** and **Sub II** (one and two octaves down), each soft (**p**) or loud (**f**).
+The standard model has 18 tablets: 13 tone tablets (1–9, O, A, B, V), **P** for a sharp attack, three vibrato speeds
+(I, II, III) and vibrato **Amplitude** (depth). The **Concert** model, which this firmware follows, adds four more:
+**Sub I** and **Sub II**, one and two octaves below the note, each soft (**p**) or loud (**f**).
 
-## Sources
+## What there was to go on
 
-In order of authority:
+No Clavioline was available to measure, so everything comes from documents and one recording. In order of authority:
 
-1. **G. H. Hillier, "The Clavioline", *Electronic Engineering*, October 1952, pp. 454–455.** The primary source:
-   - full circuit diagrams of the tone generator (Fig. 2), the vibrato (Fig. 3), the tone-forming network (Fig. 4) and the amplifier (Fig. 5);
-   - a description of how each part behaves;
-   - a table of tablet settings for 15 instruments.
-2. **Selmer Electronics, "Tone Generator — Concert Clavioline", drawing DRG 1289.** A faint scan of the Concert model's tone generator:
-   - **the same resistor-ladder oscillator and tone network as 1952**;
-   - the Sub I / Sub II divider valves and their four tablets;
-   - the control valve's anode load (100 kΩ), its coupling capacitor (0.02 µF), and a 150 V supply;
-   - no coil values.
-3. **C. Martin, US patent 2,563,477 (filed 1948).** The principle:
-   - a multivibrator whose pitch is set by one RC time constant;
-   - a "coupling tube" held cut off until a key's second contact opens it after a delay, short for percussion or long for a gradual start;
-   - a filter of windings on one core, in series between that tube and the amplifier, with capacitors switched to their ends and junction.
+1. **G. H. Hillier, "The Clavioline", *Electronic Engineering*, October 1952, pp. 454–455.** The main source. It
+   prints the full circuit diagrams (the tone generator, the vibrato, the tone-forming network and the amplifier),
+   explains how each part behaves, and gives the tablet settings for 15 instruments.
+2. **Selmer Electronics, "Tone Generator — Concert Clavioline", drawing DRG 1289.** A faint factory drawing of the
+   Concert model. It shows the same oscillator and tone network as the 1952 article, plus the sub-octave circuit and a
+   few component values the article leaves out. It gives no coil values.
+3. **C. Martin, US patent 2,563,477 (filed 1948).** The inventor's own description of the principle. The production
+   instrument differs in detail, so the patent was used to confirm what the circuit was meant to do, never for values.
+4. **Gordon Reid, "The Story Of The Clavioline", *Sound On Sound*, March 2007.** A history by the owner of a Selmer
+   Concert. It describes the raw tone ("harmonically rich, buzzy … similar to a square wave") and how the knee lever is
+   played, quotes the Selmer service manual on the amplifier's deliberate distortion, and lists 37 Selmer voicings.
+5. **A 1953 Gibson Clavioline restoration (antiqueradio.org).** Practical details from someone who had one apart: the
+   resistor chain behind the keys, the two key contacts, the knee lever's construction.
+6. **Vintage Keys Studio, ["The Joe Meek Telstar Keyboard: The Clavioline"](https://www.youtube.com/watch?v=JK0m1moewgA)
+   (YouTube).** A working Clavioline demonstrated note by note. It is the only real sound this project could measure:
+   the plain tone with no tablets (about 1:52), a sustained note (about 1:44) and tablet P (about 1:58).
 
-   The production circuit differs in detail, so the patent was used to confirm intent, never for values.
-4. **Gordon Reid, "The Story Of The Clavioline", *Sound On Sound*, March 2007.** A history by the owner of a Selmer Concert:
-   - the keyboard compass;
-   - the raw tone ("harmonically rich, buzzy … similar to a square wave");
-   - how the knee lever is played;
-   - a quote from the Selmer service manual on the amplifier's deliberate distortion;
-   - 37 Selmer voicings.
-5. **A 1953 Gibson Clavioline restoration (antiqueradio.org).** It confirms the resistor chain behind the keys, the two key contacts closing with "a very slight delay" for a click-free start, and the knee lever as a carbon-track potentiometer.
+## How the original works
 
-## Reconstructing the circuit
+### Making a note
 
-### The tone generator (Fig. 2)
+Behind the keys is a chain of precision resistors. Pressing a key connects one point on that chain to the oscillator,
+which sets its pitch. The point nearest the oscillator cuts off everything beyond it, so when several keys are held,
+**the highest one always sounds**. The article says so explicitly.
 
-- **Pitch:** each key grounds one tap of a chain of ½ % resistors in the multivibrator's grid circuit.
-  - The tap nearest the grid shorts everything below it, so **the highest key always wins**, and the article says so.
-  - At rest a 30 V bias holds the oscillator stopped, so every note after silence starts from the same state.
-- **Coupler:** switches the timing capacitors to drop or raise the pitch an octave.
-- **Two contacts per key:** the first starts the oscillator; the second, an instant later, opens the **control valve**
-  (a 6BA6) through its cathode network.
-  - All keys share that second contact, so **sliding between held keys never restarts the attack**.
-  - The cathode network's printed values give the attack time constants exactly: **19.2 ms**, and **1.54 ms with tablet P**.
-- **The valve's turn-on:** the 6BA6 is a remote-cut-off valve, so it opens gradually, a soft swell rather than a switch.
-  - The printed bias resistors do not give believable absolute voltages, so the swell's exact shape is an estimate. Its timing comes from the printed values.
-- **Waveform:** the control valve's output is "trapezoidal in form": a square wave with sloped edges.
-  - The Concert's sub-octaves are flip-flop dividers clocked by the oscillator, mixed in softly or loudly.
+Each key has **two contacts**. The first starts the oscillator. The second, a moment later, opens a **control valve**
+that lets the sound through, so notes start cleanly without a click. All the keys share that second contact, so
+sliding from one held key to the next changes the pitch without starting a new note.
 
-### The vibrato (Fig. 3)
+How quickly the control valve opens is set by a small resistor–capacitor network, and the article prints its values.
+From them the attack works out at about 19 ms normally and about 1.5 ms with tablet **P**. That is all P does
+according to the article: it shortens the attack, "so that a definite transient appears at the commencement of each
+note".
 
-A second 6SN7 oscillates at **4.5, 5.5 or 6.5 Hz** depending on the speed tablet. It reaches the main oscillator
-through a shared cathode resistor, giving mostly pitch vibrato "with a small amount of amplitude modulation".
+The oscillator's output is described as "trapezoidal in form": roughly a square wave with sloping edges. That is the
+bright, buzzy raw tone that everything else shapes.
 
-The Amplitude tablet shorts a 1.5 MΩ resistor in a divider with 500 kΩ, so **the deep vibrato is 3.8 times the shallow
-one**. The depth in cents is not recorded.
+### The vibrato
 
-### The tone-forming network (Fig. 4)
+A second, slow oscillator wobbles the pitch at 4.5, 5.5 or 6.5 times a second, depending on the speed tablet, with "a
+small amount of amplitude modulation". The Amplitude tablet changes a resistor so the deep vibrato is 3.8 times the
+shallow one. The depth itself (how far the pitch moves) is not recorded anywhere.
 
-This is what makes a Clavioline sound like one. Every wire in Fig. 4 was traced, in an enlargement and in the
-article's own scan at 500 dpi, with every junction dot checked.
-- **L1–L4** are four windings on **one core** (the heavy bar above them).
-- L4 and L2 are in series. Their junction with L1 is a tap, and **L3** is a separate secondary.
-- **L5** is a separate coil.
+### The tablets and the tone-forming network
 
-The traced netlist, with every printed value:
+This network is what makes a Clavioline sound like one, and it was traced wire by wire from enlargements of the
+article's diagram, with every junction checked.
+
+Between the control valve and the amplifier, the signal passes **through a chain of coils**. Four of them are windings
+on one shared iron core; a fifth is separate. The tone tablets hang capacitors and resistors off this chain, and a
+small capacitor (with tablets 7, 8 and 9 adding more) lets some of the signal bypass the coils altogether. Each
+capacitor resonates with the coils at some frequency, emphasising part of the tone the way the body of an acoustic
+instrument does.
+
+Because it is one connected circuit, the tablets **interact**. A few examples:
+- tablets 5 and 6 sit on a separate winding of the shared core, so they only have an effect when current flows in the
+  main windings;
+- tablet O damps the last coil, which softens what tablets 1 and 2 do;
+- tablet B shorts the middle of the chain, which disables tablet A;
+- the knee lever is a variable resistor across the network's input, so it changes the tone slightly as well as the
+  volume. The patent says it controls "the volume and possibly the timbre".
+
+This matches the patent: Martin's coils sit in series between the valve and the amplifier, with capacitors switched
+onto their ends and their middle.
+
+A full list of the traced connections is at the end of this page.
+
+### The amplifier and speaker
+
+The amplifier was "designed to introduce a controlled amount of harmonic distortion", and the service manual says "a
+large amount of distortion is deliberately obtained". The speaker, too, was chosen to "add its measure". No values are
+printed for either, so both are estimates. The distortion comes after the knee lever, so playing louder adds more of it.
+
+## Judgement calls
+
+Where the drawings were unclear, the choice was made by asking which reading made the instrument behave as its
+documents say it did.
+
+**The capacitor row.** The diagram shows a tiny gap in one row of capacitors. Taken literally, it disconnects the last
+coil from the rest, leaving only the small bypass capacitor to carry the sound. The first version of the firmware
+followed that reading, and it sounded thin and harsh: the presets came out wildly different in volume, and Cornet
+(tablet 6 alone, in two separate Selmer tables) did nothing at all. Read as one continuous row, the signal path matches
+the patent, the presets come out at similar volumes with their own characters, and Cornet works. The gap was treated as
+a drawing artefact.
+
+**Tablet V's capacitor.** The 1952 drawing labels it 100 pF, but that value would make V do almost nothing, while
+Selmer's Violin card offers "O or V" as alternatives, so V clearly did something. On the Concert drawing the value is
+faint and could read 0.1 or 0.01 µF. With 0.1 µF the V presets come out much quieter than their O versions; with
+0.01 µF V darkens the tone at the same volume, a gentler alternative to O, as the card implies. This firmware uses
+0.01 µF.
+
+**Tablet A.** A puts a capacitor from the middle of the coil chain to ground. How strong its effect was depends on the
+coil values, which no document gives, and none of Selmer's voicings use it, so nothing pins it down further.
+
+## What had to be estimated
+
+The drawings give every capacitor and resistor, but **no coil values**, and nothing on the amplifier's input or the
+cable to the amplifier cabinet. The coils were estimated so that each tablet's resonance falls where an instrument maker
+would put it, between a few hundred hertz and a few kilohertz. The relationships between tablets come from the circuit
+itself whatever the coil values: tablet 2 resonates exactly an octave above tablet 1, tablets 3 and 4 are 9.5
+semitones apart, and tablets 5 and 6 are 6 semitones apart. Only the absolute frequencies are guesses.
+
+Also estimated: the oscillator's exact wave shape, how the control valve's opening curves, the vibrato depth, the knee
+lever's taper, the amount of distortion and the speaker's response. [ENGINE.md](ENGINE.md) lists every estimate and
+its value.
+
+## Making the firmware
+
+### First attempt: simulating the circuit
+
+The first versions ran the whole tone network on the FM-1 as a live circuit simulation, every component, every sample.
+That proved the reading of the circuit was right: the tablets interacted as the drawing says. But it used most of the
+FM-1's small processor, so the device buzzed when it ran out of time, and it still did not sound convincing.
+
+### Finding what was missing
+
+A careful audit against the article showed that the problems were around the network, not in it:
+- **The wave shape.** A perfectly symmetrical trapezoid has only odd harmonics. A valve oscillator of this kind is
+  lopsided, with one sharp edge and one that recovers more slowly, which adds the even harmonics that make the tone
+  reedy.
+- **The amplifier and speaker.** The documents stress deliberate distortion and a speaker that colours the sound. The
+  firmware had almost no distortion and no speaker at all.
+- **The coils' losses.** With the coils estimated as quite lossy, several tablets barely changed anything. Values
+  usual for iron-core audio coils of the time make each tablet distinct.
+- **Tablet P.** An earlier version had invented a "ping" and an automatic fade for P. Both were removed, because the
+  article describes P only as a shorter attack.
+
+### Making it fit
+
+Instead of simulating the network live, it is now solved in advance on a PC, from the same model, for all 8,192
+combinations of the 13 tone tablets. Each result is stored as a set of five compact filters. The FM-1 just loads the
+filters for whichever tablets are down. The tablets still interact exactly as the model says, at a small fraction of
+the processing cost.
+
+The firmware also runs on a PC, where scripted performances are recorded and checked automatically: tuning, vibrato
+speeds, attack times, and the FM-1's filters against the circuit model. Every change has to pass before it goes to the
+keyboard.
+
+## Listening against a real Clavioline
+
+Once the firmware sounded right in general, the Vintage Keys Studio video gave something real to compare against.
+
+**Tablet P.** In the recording, each P note rises in a few milliseconds to a sharp peak, falls about 10 dB within 40
+ms, then holds steady, and every note of a quick run peaks again. The firmware's P, which only shortened the attack,
+had no peak at all. The circuit explained it: the control valve has a capacitor on its screen grid (C4 on the 1952
+diagram) that charges up while the valve is shut. When a note opens the valve, that stored charge briefly gives it
+extra gain, which sags away as the capacitor drains. A fast opening (P) turns that into a sharp peak; the normal slow
+opening into a gentle swell, which matches the recording's sustained notes too. The capacitor's timings were fitted to
+the recording's run of P notes, and the firmware now falls 8.3 and 10.2 dB at 20 and 40 ms against the recording's 7.6
+and 10.0 dB.
+
+**The plain tone.** Comparing a plain note with no tablets showed the firmware broadly right, with one fault: its
+high notes had too little of their upper harmonics. That was an error in how the firmware stored its waveforms, not
+anything about the instrument, and it was fixed. The recording also shows dips at regular frequencies that come from
+the room's echo; those were deliberately not copied. Whether the original's low notes are as rich as they sound in the
+recording could not be settled from one microphone in one room.
+
+## Open questions
+
+Measurements or clean recordings of a surviving instrument would settle these:
+- the coil values and losses, and so the exact frequencies and strengths of the tablets' resonances;
+- the knee lever's resistance range and taper ("special construction and grading");
+- the vibrato's depth, and what happens when two speed tablets are down together;
+- the oscillator's exact wave shape, and how the control valve's opening curves;
+- what the Concert's "muting" switches on its sub-octave stage did.
+
+## For the technically minded: the traced tone network
+
+Every printed value from Fig. 4 of the 1952 article, with the Concert drawing's values where noted. L1–L4 are
+windings on one core: L4 and L2 in series, their junction with L1 a tap, L3 a separate secondary. L5 is a separate
+coil.
 
 ```
 source   control valve anode (100 kΩ load, Concert) --0.02 µF (Concert)-- IN
 IN-OUT   C30 100 pF, always;  + C24 200 pF (7), C25 0.005 µF (8), C26 0.015 µF (9)
 IN       C28 0.001 µF to ground;  R31 20 kΩ + C29 0.05 µF to ground;  R32 knee lever to ground
-         C17 0.01 µF (see below) + R29 5 kΩ to ground when V is down (R30 3 MΩ otherwise)
+         C17 0.01 µF (see "Tablet V") + R29 5 kΩ to ground when V is down (R30 3 MΩ otherwise)
 IN-NB    L4 + L2              NB   C27 0.02 µF to ground (A);  short to ground (B)
 NB-N1    L1                   N1   R26 250 kΩ ∥ C20 0.005 µF (3);  R27 250 kΩ ∥ C21 0.015 µF (4)
                                    C18 0.02 µF (1);  C19 0.005 µF (2)
@@ -92,103 +205,5 @@ L3       ground - N3;   N3   C22 0.01 µF (5);  C23 0.005 µF (6)
 OUT      to the amplifier
 ```
 
-So the signal runs **through** the coils (L4, L2, L1, L5) to the amplifier. The tablets hang capacitors and resistors
-off that path, and C30 with tablets 7, 8 and 9 bridges round it. It is a resonant low-pass ladder with a bypass, as
-in the patent: Martin's windings sit in series between valve and amplifier, with the junction grounded directly or
-through a capacitor (here **B** and **A**).
-
-Because everything shares one circuit, **the tablets interact**:
-- **5** and **6** tune the secondary, and they matter only while current flows in the primary.
-- **O** damps L5, softening tablets 1 and 2.
-- **B** shorts the tap and disables **A**.
-- The knee lever, a resistor across the input, changes the tone as well as the level. The patent says it controls "the volume and possibly the timbre".
-
-#### One judgement call: the capacitor row
-
-The drawing shows a small gap in the row of capacitors between C19 and R26. Taken literally, it cuts L5 off from the
-coil chain:
-- the coils become a dead-end branch;
-- the only route to the amplifier is the 100 pF capacitor.
-
-The first version of this firmware followed that reading. It sounded thin and harshly buzzy: the fundamental vanished,
-and Selmer's own presets came out 46 dB apart in level.
-
-Read as one continuous row, everything falls into place:
-- the signal path matches the patent;
-- the presets come out within a few decibels of each other, each with its own character;
-- **Cornet, which Selmer's tables give as tablet 6 alone, finally does something.** With the gap, tablet 6 would have
-  been inert, contradicting two independent Selmer tables.
-
-The row is treated as one node.
-
-#### Tablet V's capacitor
-
-The 1952 drawing has a "100pF" label beside C17, but with 100 pF across a node of about 16 kΩ, V changes nothing
-audible (0.1 dB). Selmer's Violin card offers "O or V" as alternatives, so on the real instrument V clearly did
-something. On the Concert drawing, V's capacitor is faint: it could read ".1" or ".01".
-- **0.1 µF** darkens the tone, but also drops the level 6–10 dB, so the V presets sound dull and quiet next to their
-  O versions (O changes the level by only 0.8 dB).
-- **0.01 µF** darkens the upper harmonics by 6–10 dB at the same level as O: a gentler alternative to O, as the card
-  implies.
-
-This firmware uses 0.01 µF.
-
-#### Tablet A
-
-A puts 0.02 µF from the coil tap (between L2 and L1) to ground. That makes a low-pass section in the middle of the
-ladder, and with the estimated coils it changes some harmonics by up to 7 dB, as much as tablets 2 or 3. How strong it
-really was depends on the coil values, which no document gives. None of Selmer's voicings use A, so nothing pins it
-down further.
-
-#### What is not in any document
-
-The drawings give every capacitor and resistor but **no coil values**. Also missing:
-- the amplifier's input impedance;
-- the capacitance of the cable to the separate amplifier cabinet.
-
-These were estimated from the printed capacitors, so that each tablet's resonance falls where an instrument maker
-would put it (a few hundred hertz to a few kilohertz). [ENGINE.md](ENGINE.md) lists them. The patterns are the circuit's
-own, whatever the coil values: tablet 2 tunes exactly an octave above tablet 1, tablets 3 and 4 are 9.5 semitones
-apart, and tablets 5 and 6 are 6 semitones apart. The absolute frequencies are estimates.
-
-### The amplifier (Fig. 5)
-
-A 6J5 and two 6V6s, "designed to introduce a controlled amount of harmonic distortion", most of it 2nd harmonic. The
-service manual says "a large amount of distortion is deliberately obtained". No values are printed, so the amount is an
-estimate. It sits after the knee lever, so playing louder adds more distortion.
-
-## From circuit simulation to a fitted model
-
-The first versions simulated the whole Fig. 4 network on the FM-1, element by element, every sample. That proved the
-reconstruction (the tablets interact as the drawing says), but it cost most of the FM-1's processor, and the result
-still did not sound convincing. An audit against the article found the reasons elsewhere:
-
-- **The wave shape:** a symmetric trapezoid has only odd harmonics. A valve multivibrator of this kind is uneven
-  (one sharp edge, one recovering), which adds the even harmonics that make the tone reedy.
-- **The amplifier and speaker:** the article and the service manual stress deliberate distortion and a speaker that
-  adds its own; the engine had almost none (2nd harmonic 40 dB down) and no speaker at all.
-- **The resonances:** with coil losses estimated at Q ~ 6, several tablets (A, 5, 6, 7, 9) changed little. Q ~ 15,
-  usual for iron-core audio coils, makes them distinct.
-- **Tablet P:** the article documents it as a shorter attack that makes "a definite transient". An earlier
-  invented "ping" and an automatic decay were removed. A recording of a real Clavioline then showed the transient
-  itself: each P note peaks and falls about 10 dB within 40 ms, then holds. The control valve's screen-grid capacitor
-  (C4 on Fig. 2) accounts for it, and its dynamics are fitted to that recording ([ENGINE.md](ENGINE.md)).
-
-- **Upper harmonics:** comparing a plain note (no tablets) with the same recording showed the firmware's C5 20–25 dB
-  short from the 12th harmonic up. The cause was ours, not the instrument's: one wavetable per octave cut a note near
-  the bottom of an octave at about 5.5 kHz. A table per half-octave keeps every note's harmonics to at least
-  7.4 kHz, and C5 now sits within a few decibels of the recording there. Other differences in that comparison (a
-  weak fundamental at C5, dips near 500 / 1500 / 2500 Hz) match the room's echo and were left alone.
-
-The network is now solved on a computer for all 8192 tablet combinations, from the same model, and each response is
-stored as five resonant filters. The FM-1 runs those instead of the circuit: the tablets still interact exactly as the
-model says, at a fraction of the cost.
-
-## Open questions
-
-- The coil values and losses, and so the exact formant frequencies and strengths. Measurements or recordings of a
-  surviving instrument would settle them.
-- The knee lever's resistance range and taper ("special construction and grading").
-- The vibrato's depth in cents, and what happens when two speed tablets are down together.
-- The oscillator's exact wave shape (duty cycle, recovery), and the shape of the valve's turn-on.
-- The function of the Concert's "muting" switches on its divider stage.
+The estimated values (coils, amplifier input, cable) are in [ENGINE.md](ENGINE.md), and the model itself is
+`tools/clav_net_ref.py`.
