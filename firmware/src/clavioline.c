@@ -705,6 +705,41 @@ static char *put_pct(char *p, uint32_t pm)      /* per mille -> "nn%" */
     return p;
 }
 
+/* ---- the battery: a low-battery warning (not on the original) ----------------------------------------- */
+/* The battery reaches the ADC (ch3) through a divider whose values no document gives. BATT_LOW is about 10 % left
+ * for a lithium cell (~3.6 V) through an assumed 1:2 divider and a 3.3 V reference: ESTIMATE. Hold HOME in PLAY to
+ * read the raw value, to calibrate it. On USB the reading is the charging voltage: no warning. */
+#define BATT_LOW 558
+#define BATT_OK 570                             /* (hysteresis: the warning clears above this) */
+static int32_t batt_avg = -1;                   /* the raw reading x16, smoothed over ~4 s; -1 = none yet */
+static uint32_t batt_low;
+
+static int32_t batt_read(void)
+{
+#ifdef DINGHY_HOST
+#ifdef HOST_BATT
+    return HOST_BATT;                           /* (a host build can pretend: -DHOST_BATT=500) */
+#else
+    return -1;
+#endif
+#else
+    return fm1_adc_read(FM1_ADC_BATT);
+#endif
+}
+
+static void batt_poll(void)                     /* main loop, 4 times a second */
+{
+    static uint32_t t;
+    int32_t v;
+    if (fm1_ms - t < 250u) return;
+    t = fm1_ms;
+    if ((v = batt_read()) < 0) return;
+    if (batt_avg < 0) batt_avg = v * 16;
+    batt_avg += (v * 16 - batt_avg) / 16;
+    if (!batt_low && batt_avg < BATT_LOW * 16) batt_low = 1;
+    else if (batt_low && batt_avg > BATT_OK * 16) batt_low = 0;
+}
+
 /* ---- MIDI in ---------------------------------------------------------------------------------------- */
 static uint32_t idle_ok, midi_dirty;
 static void midi_in(void)
@@ -878,6 +913,7 @@ static void app_main(void)
         }
 
         midi_in();
+        batt_poll();
         if (changed || midi_dirty) { midi_dirty = 0; update_voice(); }
         a_tabs = set.tabs;
         a_decay = set.decay ? DECAY_Q30[set.decay - 1u] : 0u;
@@ -960,6 +996,20 @@ static void app_main(void)
         if (msg && drawn_st != 0xFFFFFFFEu) { drawn_st = 0xFFFFFFFEu; draw_status(msg, C_AMBER); }
         else if (!msg && cpu_over) {
             if (drawn_st != 0xFFFFFFFDu) { drawn_st = 0xFFFFFFFDu; draw_status(cpu_txt, cpu_over ? C_AMBER : C_CHROME); }
+        } else if (!msg && fm1_in.buttons >> BTN_HOME & 1u) {   /* HOME held: the raw battery reading (calibration) */
+            uint32_t raw = batt_avg < 0 ? 0u : (uint32_t)(batt_avg + 8) / 16u;
+            if (drawn_st != (0x80000000u | raw)) {
+                char t[16] = "BATTERY ----";
+                if (batt_avg >= 0) {
+                    t[8] = (char)('0' + raw / 1000u % 10u); t[9] = (char)('0' + raw / 100u % 10u);
+                    t[10] = (char)('0' + raw / 10u % 10u); t[11] = (char)('0' + raw % 10u);
+                }
+                drawn_st = 0x80000000u | raw;
+                draw_status(t, C_CHROME);
+            }
+        } else if (!msg && batt_low) {          /* the last ~10 %: LOW BATTERY, blinking slowly (1 s on, 1 s off) */
+            uint32_t on = (fm1_ms / 1000u) & 1u;
+            if (drawn_st != 0xFFFFFFFBu - on) { drawn_st = 0xFFFFFFFBu - on; draw_status(on ? "LOW BATTERY" : "", C_ORANGE); }
         } else if (!msg && ((uint32_t)set.window | (uint32_t)(set.tune + 50) << 1) != drawn_st) {
             drawn_st = (uint32_t)set.window | (uint32_t)(set.tune + 50) << 1;
             draw_status(0, C_CHROME);

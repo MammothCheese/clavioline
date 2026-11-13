@@ -107,6 +107,12 @@ To hear the tablets while you set them:
 
 A `*` after the name means you have changed something since choosing it.
 
+### Low battery
+
+When the battery is down to roughly its last 10 %, the bottom line of the screen blinks **LOW BATTERY** in orange.
+The level is an estimate for now: holding **HOME** while playing shows the raw battery reading, which helps set it
+accurately.
+
 ## Development
 
 1. **Research.** A 1952 _Electronic Engineering_ article, the original patent, a Selmer factory drawing of the Concert model, a 2007 magazine history

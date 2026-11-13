@@ -115,6 +115,7 @@ from the lowest note, 87 Hz, up), and C17 is left out while V is up (within 0.07
 | Amplifier | at a third of the level, d = 1.59, 2.5× after | **Estimate** |
 | Speaker | see the signal chain | **Estimate** |
 | Pitch | the FM-1's F3 key = F3 with the coupler at MED | **Estimate** |
+| Low battery (not historical) | warning below raw 558 on the battery input (clears above 570), smoothed over ~4 s: about 10 % left for a lithium cell through an assumed 1:2 divider | **Estimate**: hold HOME in PLAY to read the raw value and calibrate `BATT_LOW` |
 
 ## Options (not on the original)
 
