@@ -1,0 +1,9 @@
+{
+  "what": "CLAVIOLINE turns the FM-1 into the 1950s Selmer Clavioline, the valve keyboard behind the lead line of \"Telstar\". Rebuilt from the original circuit diagrams: the 13 tone tablets, the percussive P attack, three-speed vibrato, the Concert model's sub-octaves, the knee lever on the PRESETS knob, and 40 period voicings from Violin to Musical Saw.",
+  "author": "MammothCheese",
+  "kinds": [
+    "synth"
+  ],
+  "image": "docs/card.png",
+  "color": "#FF8E24"
+}
