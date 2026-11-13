@@ -15,7 +15,7 @@ contributors are listed below.
 | The update loader's screen: `firmware/loader/ldr_screen.c`, `tests/ldr_screen_test.c` | Copyright (C) 2026 zvenson (from OberVave, the Firmware Hub's look); the idea, a loader that draws, its 5 x 7 letters and the order of things from [Skiff](https://github.com/illuminus5/skiff) by illuminus5, GPL-3.0 |
 | From OberVave: the storage (blobs, slots), `LCD_IDLE`, the SMK-37 wiring of `platform.c`, `store.h`, the pad event queue in `smk_input.h`, `tests/smk_flash_test.c`, `tests/run_tests.sh`, the CI workflow | Copyright (C) 2026 zvenson |
 | The wiring `platform.c`, the host mode `tests/host.c` (Dinghy) | zvenson |
-| The Clavioline: `firmware/src/clavioline.c`, `clav_net.h`, `clav_tables.h`, `tools/clav_net_ref.py`, `gen_clav_tables.py`, `plot_net.py`, `tests/check_engine.py`, `net_check.py`, `net_test.c`, `run_engine.sh`, `tests/scripts/`, `docs/` (except `docs/platform/`, Dinghy's) | CLAVIOLINE's authors |
+| The Clavioline: `firmware/src/clavioline.c`, `clav_formant.h`, `clav_formants.h`, `clav_tables.h`, `tools/clav_net_ref.py`, `fit_formants.py`, `clav_wave.py`, `gen_clav_tables.py`, `plot_net.py`, `tests/check_engine.py`, `formant_check.py`, `formant_test.c`, `run_engine.sh`, `tests/scripts/`, `docs/` (except `docs/platform/`, Dinghy's) | CLAVIOLINE's authors |
 
 ## Third-party material
 

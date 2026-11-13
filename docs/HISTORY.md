@@ -157,10 +157,30 @@ A 6J5 and two 6V6s, "designed to introduce a controlled amount of harmonic disto
 service manual says "a large amount of distortion is deliberately obtained". No values are printed, so the amount is an
 estimate. It sits after the knee lever, so playing louder adds more distortion.
 
+## From circuit simulation to a fitted model
+
+The first versions simulated the whole Fig. 4 network on the FM-1, element by element, every sample. That proved the
+reconstruction (the tablets interact as the drawing says), but it cost most of the FM-1's processor, and the result
+still did not sound convincing. An audit against the article found the reasons elsewhere:
+
+- **The wave shape:** a symmetric trapezoid has only odd harmonics. A valve multivibrator of this kind is uneven
+  (one sharp edge, one recovering), which adds the even harmonics that make the tone reedy.
+- **The amplifier and speaker:** the article and the service manual stress deliberate distortion and a speaker that
+  adds its own; the engine had almost none (2nd harmonic 40 dB down) and no speaker at all.
+- **The resonances:** with coil losses estimated at Q ~ 6, several tablets (A, 5, 6, 7, 9) changed little. Q ~ 15,
+  usual for iron-core audio coils, makes them distinct.
+- **Tablet P:** the article documents it as a shorter attack and nothing more. An earlier "ping" and an automatic
+  decay were removed.
+
+The network is now solved on a computer for all 8192 tablet combinations, from the same model, and each response is
+stored as five resonant filters. The FM-1 runs those instead of the circuit: the tablets still interact exactly as the
+model says, at a fraction of the cost.
+
 ## Open questions
 
-- The coil values, and so the exact formant frequencies. Measurements from a surviving instrument would settle them.
+- The coil values and losses, and so the exact formant frequencies and strengths. Measurements or recordings of a
+  surviving instrument would settle them.
 - The knee lever's resistance range and taper ("special construction and grading").
 - The vibrato's depth in cents, and what happens when two speed tablets are down together.
-- The trapezoid's exact edge time, and the shape of the valve's turn-on.
+- The oscillator's exact wave shape (duty cycle, recovery), and the shape of the valve's turn-on.
 - The function of the Concert's "muting" switches on its divider stage.

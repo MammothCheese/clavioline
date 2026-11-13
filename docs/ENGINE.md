@@ -1,94 +1,66 @@
 # The sound engine
 
 How the firmware makes the sound, which numbers come from the original drawings and which are estimates, and how it
-is tested. The history behind it is in [HISTORY.md](HISTORY.md).
+is tested. The history behind it, including why the engine looks the way it does, is in [HISTORY.md](HISTORY.md).
 
 ## Signal chain
 
 ```
-keys / MIDI ─► highest note ─► oscillator (trapezoid) ─┬─► control valve (V2) ─► tone-forming network ─► amplifier ─► out
-               coupler, tune     vibrato FM + AM       │    attack from the        Fig. 4, every part,      2nd-harmonic
-                                                      │    printed cathode        knee lever inside        distortion
-               Concert Sub I / II dividers ───────────┘    network, tablet P
+                 22.05 kHz                                                                   44.1 kHz
+keys ─► pitch ─► multivibrator ─► control valve ─► coupling ─► formant filter ─► knee ─► ┊ ─► valve amp ─► speaker ─► out
+        vibrato  wavetables       attack (P)       high-pass   5 biquads per      lever  ┊    2nd harmonic  cabinet
+                 + Sub I / II     sustains         (C5)        tablet combination        ┊
 ```
 
-| Stage | File | How |
+The instrument runs at 22.05 kHz, one step for every two output samples. A 4-point half-band interpolator
+`[-1 9 9 -1] / 16` brings it to 44.1 kHz for the amplifier and the speaker, so the amplifier's distortion does not alias.
+After 100 ms of silence the engine rests and does no work until a key goes down.
+
+| Stage | How | Source |
 |---|---|---|
-| Notes | `firmware/src/clavioline.c` | A count per MIDI note from keys, MIDI in and the STOPS drone; the highest wins. The pitch changes at once, and the gate stays open while any note is held |
-| Oscillator | `clavioline.c` | A 32-bit phase accumulator. Trapezoid with 50 % duty and edges of fixed duration, anti-aliased with polyBLAMP at its four corners |
-| Sub-octaves | `clavioline.c` | Flip-flops toggled on each oscillator period (÷2, ÷4), square waves with polyBLEP; **p** and **f** levels |
-| Control valve | `clavioline.c`, tables from `tools/gen_clav_tables.py` | The cathode network (C1–C3, R1, R3, R4, R7, R8) discretised exactly over 8 samples; tablet P selects the other matrix. Gain follows a remote-cut-off curve |
-| Coupling | `clavioline.c` | C5, the control valve's 0.02 µF coupling capacitor, as a first-order high-pass at 71 Hz on the source |
-| Tone network | `firmware/src/clav_net.h`, reference `tools/clav_net_ref.py` | Below |
-| Amplifier | `clavioline.c` | y + d·y², a soft ceiling (1.5u − 0.5u³), DC blocker |
+| Notes | A count per MIDI note from keys, MIDI in and the STOPS drone; the highest wins. The pitch changes at once; the gate stays open while any note is held, so legato never re-attacks. After silence the oscillator restarts from rest | Fig. 2 key ladder and contacts (documented) |
+| Oscillator | Band-limited wavetables, one per octave (harmonics up to 10.5 kHz), of the multivibrator's wave as the control valve passes it on: a sharp drop, an exponential recovery, uneven clipping | "trapezoidal in form" (documented); the shape is an **estimate** (`tools/clav_wave.py`) |
+| Sub I / II | Square wavetables at a half and a quarter of the oscillator's phase (the dividers flip on its periods); **p** and **f** levels | Concert drawing (documented); levels **estimated** |
+| Vibrato | Sine LFO at 4.5 / 5.5 / 6.5 Hz; pitch ±8.4 cents, ±32 with AMP; ±3 % amplitude | Rates documented, depth ratio derived; depth and AM **estimated** |
+| Control valve (attack) | The printed cathode network, discretised exactly over 8 output samples; tablet P selects the short time constant; gain through a remote-cut-off curve. Notes sustain while held | Time constants derived (19.2 ms; 1.54 ms with P); curve **estimated** |
+| Coupling | C5 (0.02 µF) as a first-order high-pass at 71 Hz | Concert drawing |
+| Formant filter | Five biquads, decoded for the tablets down (below) | Fig. 4 model |
+| Knee lever | A gain per lever step: the model's level change with R32, smoothed over ~6 ms | Position documented; taper **estimated** |
+| Valve amplifier | y + 0.59 y², a soft ceiling: the 2nd harmonic well up at full swell, less when softer | "mostly 2nd harmonic", "a large amount of distortion is deliberately obtained" (documented); amount **estimated** |
+| Speaker and cabinet | Three biquads: high-pass 100 Hz Q 1.1, +4 dB at 2.2 kHz Q 1, low-pass 5.5 kHz | A 10-inch speaker "specially produced to add its measure" (documented); response **estimated** |
+| DC blocker | ~14 Hz | |
 
-## The tone network
+## The formant filter
 
-The network is simulated element for element. The netlist is in [HISTORY.md](HISTORY.md) and in `tools/clav_net_ref.py`.
+The tone network's model (`tools/clav_net_ref.py`, the netlist in [HISTORY.md](HISTORY.md)) is solved on a computer,
+not on the FM-1:
 
-- **Discretisation:** every capacitor and coil is a trapezoidal (bilinear) companion model.
-  - The four coupled windings use their inductance matrix.
-  - Coil losses are a series copper resistance and a parallel core-loss resistance.
-- **Per step:** the network is solved in DK form, `v = K·st + KU·i`, with capacitor voltages and coil currents as the states.
-  - That is 6 node voltages × 9–13 multiply-accumulates (depending on the tablets), all in 32-bit integers with
-    64-bit sums, 22,050 times a second.
-- **When the gains change:** the gains (KC, KL, KU) depend on the tablets and the knee lever. When either changes, the main loop:
-  - rebuilds the conductance matrix exactly in integers;
-  - inverts it in a small software floating point (the chip has no FPU);
-  - hands the new gains to the audio interrupt.
-- **Tablet changes** fade out and in over 3 ms each way.
+1. `tools/fit_formants.py` computes the exact response of the network for each of the **8192 combinations** of tablets
+   1–9, O, A, B, V (knee lever open).
+2. It fits each response with **five second-order sections** by vector fitting, then stores each section as its zero
+   and pole frequencies and Qs (6 bytes): `firmware/src/clav_formants.h`, 262 KB of flash.
+3. On the FM-1, when a tablet changes, `fm_compute()` decodes the combination and turns each section into a biquad
+   (bilinear transform at 22.05 kHz) in a small software floating point, scaling each to unit peak gain. The audio
+   interrupt runs the five biquads in 32-bit fixed point with 64-bit sums. A tablet change fades out and in over 3 ms.
 
-### Rates, and the CPU load
+The tablets interact exactly as the model says, because every combination is solved as a whole. Splitting them into
+independent groups was measured and rejected: the ladder's sections load each other, and the error was 12 dB on a
+typical combination. Four sections per combination were not enough (90 % within 1.2 dB, the rest up to 14 dB off).
 
-A render that overruns its 5.8 ms makes the FM-1 replay the previous block, which sounds like a harsh buzz. So the
-instrument runs at **22.05 kHz**, half the audio rate:
-- **At 22.05 kHz:** the key contacts, the control valve, the oscillator and sub-octaves (anti-aliased for that rate),
-  the coupling high-pass and the tone network, one step for every two output samples;
-- **Back up to 44.1 kHz:** a 4-point half-band interpolator `[-1 9 9 -1] / 16`;
-- **At 44.1 kHz:** the valve amplifier and the DC blocker, so the amplifier's distortion does not alias.
+**Accuracy**, against the model, 50 Hz–9 kHz wherever the response is within 40 dB of its peak:
+- the stored fit, all 8192 combinations: median 0.36 dB, 99 % within 1.09 dB, worst 3.61 dB;
+- the FM-1's own code end to end (fit, rounding, decoding, fixed point), on Selmer's voicings and random combinations:
+  within 0.60 dB on all 48 tested.
 
-At that rate:
-- the network's coil constants are computed for 22.05 kHz, and it matches the exact analysis within **0.14 dB** up to 9 kHz;
-- on the highest note (3136 Hz), aliasing sits **39.6 dB** below the harmonics.
-
-Two parts of the drawing are simplified:
-
-| Part | On the chip | Difference from the drawing |
-|---|---|---|
-| C5, the 0.02 µF coupling capacitor | A first-order high-pass at 71 Hz on the source; R5 moves to the network input | Within 0.8 dB from the lowest note (87 Hz) up |
-| C17, the V tablet's 0.01 µF (with R29, R30) | Left out while V is up; it then sits behind 3 MΩ | Within 0.07 dB |
-
-Both remove a state and a node from every step. `tools/clav_net_ref.py` models the network as the chip runs it, and
-`full=True` gives it as drawn.
-
-Other savings:
-- only the states in circuit and the nodes something reads are computed;
-- every multiply is 32 × 32 → 64, and most per-sample arithmetic is plain 32-bit;
-- the control valve's cathode network steps every 8 output samples (with its exact 8-step matrix), and its gain glides
-  in between;
-- **after 100 ms of silence the engine rests and does no work** until a key goes down.
-
-The interrupt times itself against its 5.8 ms:
-- STOPS mode shows the load on the bottom line, as `CPU nn%  PEAK nn%`. The figure includes the platform's own
-  interrupts (key scanning, USB) that land inside a render;
-- if the peak passes 90 %, PLAY mode shows `AUDIO OVERLOAD` instead.
-
-**Accuracy:** `tests/net_check.py` drives the chip's code with white noise and compares the result with the exact
-analysis of the same netlist, frequency warping included. Across 29 tablet and lever combinations it agrees within
-**0.31 dB** wherever the response is within 40 dB of its peak. What remains lies 80 dB or more below the loudest sound.
-
-The responses for twelve tablet sets, with the current estimates, are in [net-responses.png](net-responses.png).
+[net-responses.png](net-responses.png) shows the model's responses for twelve tablet sets;
 `python3 tools/plot_net.py docs/net-responses.png` redraws it.
 
 ## Parameters
 
-Each value is tagged by where it comes from:
-- **Printed**: legible on the 1952 drawings;
-- **Concert**: legible on Selmer's Concert drawing;
-- **Derived**: follows from printed values;
-- **Estimate**: chosen, because no document gives it.
-
-Change any value, then run `python3 tools/gen_clav_tables.py` and rebuild.
+Each value is tagged by where it comes from: **printed** (legible on the 1952 drawings), **Concert** (legible on
+Selmer's Concert drawing), **derived** (follows from printed values) or **estimate** (chosen, because no document
+gives it). After changing a network value, rerun `python3 tools/fit_formants.py` (about 5 minutes) and
+`python3 tools/gen_clav_tables.py`, then rebuild.
 
 ### The network (`tools/clav_net_ref.py`)
 
@@ -96,43 +68,38 @@ Change any value, then run `python3 tools/gen_clav_tables.py` and rebuild.
 |---|---|---|
 | All capacitors and resistors of Fig. 4 | as drawn | Printed |
 | C17 (tablet V) | 0.01 µF | Concert, faint (".1" or ".01"); the 1952 "100pF" label would make V inaudible ([HISTORY.md](HISTORY.md)) |
-| Control valve anode load, coupling capacitor | 100 kΩ, 0.02 µF | Concert |
-| L5 | 15 H, 1 kΩ copper, 2 MΩ core loss | **Estimate**: puts tablets 1 / 2 near 290 / 580 Hz |
-| L4 + L2, L1, L3 | 2 H each, coupling 0.95, 200 Ω copper, 60 kΩ core loss | **Estimate**: puts tablets 3 / 4 near 800 / 460 Hz, A near 800 Hz, 5 / 6 near 1.1 / 1.6 kHz |
+| Control valve anode load | 100 kΩ | Concert |
+| L5 | 15 H, 1 kΩ copper, 5 MΩ core loss | **Estimate**: tablets 1 / 2 near 290 / 580 Hz |
+| L4 + L2, L1, L3 | 2 H each, coupling 0.95, 100 Ω copper, 150 kΩ core loss (Q ~ 15) | **Estimate**: tablets 3 / 4 near 800 / 460 Hz, A near 800 Hz, 5 / 6 near 1.1 / 1.6 kHz |
 | Amplifier input | 1 MΩ | **Estimate** |
-| Cable and amplifier input capacitance | 300 pF | **Estimate**: the multi-pin cable to the separate amplifier cabinet plus the input valve's Miller capacitance |
-| Knee lever (R32) | 50 Ω … 1 MΩ, log taper over 64 steps; 10 Ω at rest (silent) | Position printed; **range and taper estimated** |
-| Closed B or V contact | 100 Ω | Stands in for a short |
+| Cable and amplifier input capacitance | 300 pF | **Estimate** |
+| Knee lever (R32) | 50 Ω … 1 MΩ, log taper over 64 steps; silent at rest | Position printed; **range and taper estimated** |
 
-### The oscillator, gate and vibrato (`firmware/src/clavioline.c`, `tools/gen_clav_tables.py`)
+Two parts of the drawing are simplified in the model: C5 is the coupling high-pass outside the network (within 0.8 dB
+from the lowest note, 87 Hz, up), and C17 is left out while V is up (within 0.07 dB).
+
+### Oscillator, attack, vibrato, amplifier (`firmware/src/clavioline.c`, `tools/clav_wave.py`, `tools/gen_clav_tables.py`)
 
 | Value | Setting | Source |
 |---|---|---|
+| Wave shape | conducting 30 % of the period, recovery time constant 10 % of it, clip 2.2 with bias 0.25 | **Estimate**: harmonics 1–5 at 0, −13, −14, −15, −21 dB |
 | Attack time constants | 19.2 ms; 1.54 ms with P | Derived from the printed cathode network |
-| Valve turn-on curve | gain e^(−v/0.12) | **Estimate** (remote-cut-off valve) |
-| Control valve standing current | twice the signal swing; it opens with the gate, so a fast opening (P) rings the tone network: the percussive transient | Effect printed ("a definite transient", 1952; "an impact or percussion effect", patent); **size estimated** |
-| Key contact delays | oscillator 3 ms before the gate; gate closes 4 ms before the oscillator stops | **Estimate** |
-| Trapezoid | 50 % duty, 100 µs edges | Duty from "similar to a square wave"; **edge estimated** |
+| Valve turn-on curve | gain e^(−v/0.12) | **Estimate** |
+| Key contact delays | oscillator 3 ms before the gate; gate 4 ms before the oscillator stops | **Estimate** |
 | Sub I / II levels | f = the main tone's level, p = 10 dB softer | **Estimate** |
-| Vibrato rates | 4.5, 5.5, 6.5 Hz | Printed |
-| Vibrato depth | ±8.4 cents, ±32 cents with Amplitude | Ratio derived (3.8 : 1); **depth estimated** |
-| Vibrato amplitude modulation | ±3 % | **Estimate** ("a small amount") |
-| Several speed tablets down | the fastest wins | **Estimate** (undocumented) |
-| Amplifier | d = 0.35 | **Estimate** ("a large amount of distortion is deliberately obtained") |
+| Vibrato | 4.5, 5.5, 6.5 Hz; ±8.4 / ±32 cents; ±3 % AM; the fastest of several wins | Rates printed; ratio derived; the rest **estimated** |
+| Amplifier | d = 0.59 | **Estimate** |
+| Speaker | see the signal chain | **Estimate** |
 | Pitch | the FM-1's F3 key = F3 with the coupler at MED | **Estimate** |
 
 ## Options (not on the original)
 
 **SEQ** opens the options page; **SEQ** or **HOME** closes it. **SELECT** chooses a setting and **KNOB 1** changes it.
-The keys keep playing, so you hear each change. The settings are saved with the others.
 
 | Setting | Values | What it does |
 |---|---|---|
-| PLUCK DECAY | OFF, 0.3, **0.6** (default), 1.2, 2.5 s | Each key press starts the note at full level, then it fades 40 dB over the time chosen. This stands in for flicking the knee lever back after each note, which is how the original made plucked sounds |
+| PLUCK DECAY | **OFF** (default), 0.3, 0.6, 1.2, 2.5 s | Each key press starts at full level, then fades 40 dB over the time chosen, standing in for flicking the knee lever back |
 | DECAY ON | **P NOTES** (default), ALL NOTES | Only while tablet P is down, or on every note |
-
-The decay is a gain on the network's output, before the valve stage. On the original, pulling the lever back also
-darkened the tone, because the lever sits inside the network; this simpler fade does not.
 
 ## Tests
 
@@ -140,38 +107,39 @@ darkened the tone, because the lever sits inside the network; this simpler fade 
 sh tests/run_engine.sh        # on Windows with MinGW: CC=gcc PYTHON=python sh tests/run_engine.sh
 ```
 
-This renders scripted performances (`tests/scripts/*.txt`) with the firmware's own code on the computer and measures
-them:
+It renders scripted performances (`tests/scripts/*.txt`) with the firmware's own code on the computer, measures them,
+and compares the FM-1's formant filter with the model:
 
 | Check | Result |
 |---|---|
-| Pitch of C4 and C5, highest-note priority, return to the held note, coupler | within ±0.2 cents |
-| Legato note change | no new attack (0.6 dB level change) |
-| Attack to −40 / −20 / −3 dB | 14 / 28 / 62 ms; with P 2 / 2 / 6 ms |
-| Start of a note: first 40 ms peak against the steady peak (decay off) | 0.38 without P; 1.52 with P (Trumpet) |
-| Knee lever from step 48 to 8 | −38 dB |
-| Aliasing on a 3136 Hz note | −39.6 dB below the harmonics |
-| Vibrato I / II / III | 4.49 / 5.52 / 6.49 Hz; deep / shallow depth 3.78 |
-| Sub I f | the octave below at the level of the fundamental |
+| Pitch of C4 and C5, highest-note priority, return to the held note, coupler | within ±0.1 cents |
+| Legato note change | no new attack |
+| Attack to −40 / −20 / −3 dB | 12 / 28 / 62 ms; with P 2 / 4 / 6 ms |
+| With P, the note still sustains | +0.0 dB from 0.25 s to 0.5 s |
+| Without P, a gradual start | first 40 ms at 0.32 of the steady peak |
+| Knee lever from step 48 to 8 | −38.7 dB |
+| Aliasing on the top note (3136 Hz) | −45.3 dB below the harmonics |
+| Vibrato I / II / III | 4.49 / 5.52 / 6.49 Hz; deep / shallow 3.65 |
 | STOPS mode note buttons | SEL plays D4 (293.7 Hz) |
-| Pluck decay 1.2 s (with P, and on all notes) | 36.7 dB down from 0.2 s to 1.3 s; off: 0.0 dB |
-| Chip network against the exact analysis | within 0.14 dB at 22.05 kHz (0.31 dB at 44.1 kHz) |
+| Sub I f | the octave below at +3.1 dB re the fundamental |
+| Pluck decay 1.2 s (P notes, all notes); off | 37.2 dB down from 0.2 s to 1.3 s; off 0.0 dB |
+| The FM-1's formant filter against the model | within 0.60 dB (48 combinations) |
 
-`tests/run_tests.sh` adds the platform's update-path tests (the installer, the update loader) after a firmware build.
+`tests/run_tests.sh` adds the platform's update-path tests after a firmware build. `tests/scripts/demo.txt` plays a
+phrase on six presets: `tests/run_host.sh tests/scripts/demo.txt` writes it to `build/host/clavioline.wav`.
 
-**Listening:** `tests/scripts/demo.txt` plays a phrase on six presets. Render it with:
+### CPU load
 
-```sh
-tests/run_host.sh tests/scripts/demo.txt
-```
-
-The sound goes to `build/host/clavioline.wav`, with screenshots alongside.
+The audio interrupt times itself against the 5.8 ms it has for each 256-sample block. STOPS mode shows the load on the
+bottom line (`CPU nn%  PEAK nn%`, including the platform's own interrupts that land inside a render); if the peak passes
+90 %, PLAY mode shows `AUDIO OVERLOAD`. Per output sample the engine does roughly 40 multiplies (half of the
+instrument's work at 22.05 kHz, the amplifier and speaker at 44.1 kHz), against about 150 when it simulated the
+network.
 
 ## Building
 
-GitHub Actions builds `clavioline.fwsc` on every push to `main` (the run's artifact), and makes a release on a tag `vX.Y`.
-
-To build locally you need Linux (or WSL or Docker), the JieLi toolchain and three files from the JieLi AC79 SDK:
+GitHub Actions builds `clavioline.fwsc` on every push to `main` (the run's artifact) and makes a release on a tag
+`vX.Y`. Locally you need Linux (or WSL or Docker), the JieLi toolchain and three files from the JieLi AC79 SDK:
 
 ```sh
 pip3 install Pillow numpy
@@ -182,18 +150,20 @@ git clone --depth 1 --branch AC79NN_SDK_V1.2.1_2023-12-13 https://gitee.com/Jiel
 ```
 
 The build refuses code the FM-1 cannot run: floating point, 64-bit division, calls into the chip ROM, too much RAM.
-[platform/RULES.md](platform/RULES.md) explains why, and [platform/API.md](platform/API.md) describes the platform's functions.
+[platform/RULES.md](platform/RULES.md) explains why; [platform/API.md](platform/API.md) describes the platform.
 
 ## Files
 
 | Path | What |
 |---|---|
-| `firmware/src/clavioline.c` | The instrument: voice, oscillator, gate, vibrato, sub-octaves, amplifier, controls, screen, presets |
-| `firmware/src/clav_net.h` | The tone network on the chip, and its software floating point |
-| `firmware/src/clav_tables.h` | Generated tables (do not edit) |
-| `tools/clav_net_ref.py` | The network's netlist and values; the exact reference analysis |
-| `tools/gen_clav_tables.py` | Writes `clav_tables.h` from the values |
+| `firmware/src/clavioline.c` | The instrument: voice, oscillator, attack, vibrato, sub-octaves, amplifier, speaker, controls, screen, presets |
+| `firmware/src/clav_formant.h` | The formant filter on the chip: decoding, software floating point, biquads |
+| `firmware/src/clav_formants.h` | The fitted filters for all 8192 tablet combinations (generated) |
+| `firmware/src/clav_tables.h` | Wavetables, attack matrices, lever gains, speaker filter, tuning (generated) |
+| `tools/clav_net_ref.py` | The network's netlist and values, and its exact analysis |
+| `tools/fit_formants.py` | Fits every tablet combination and writes `clav_formants.h` |
+| `tools/clav_wave.py` | The oscillator's wave shape |
+| `tools/gen_clav_tables.py` | Writes `clav_tables.h` |
 | `tools/plot_net.py` | Plots network responses |
 | `tests/` | Host scripts and checks |
-| `tools/build.py` | The firmware build; it stamps the commit into the firmware, which shows `BUILD xxxxxxx` at power-on |
 | everything else | The FM-1 platform (Dinghy): USB, updates, rescue, MIDI, screen, keys, flash |

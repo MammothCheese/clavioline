@@ -128,58 +128,80 @@ for i in range(0, 258, 16):
 lines.append("};")
 lines.append("")
 
-# ---- the tone-forming network (Fig. 4): companion-model constants -----------------------------------------
-# The netlist and every value are in tools/clav_net_ref.py (PRINTED / CONCERT / ESTIMATE tags there).
-# Units on the chip: voltage 2^-16 V, current 2^-16 uA, conductance uS in Q12, impedance MOhm in Q28.
-import clav_net_ref as net
-Pn = net.P
-def g_r(r): return 1e6 / r                       # uS
-def g_c(c): return 2.0 * c * FS * 1e6           # uS (trapezoidal companion conductance)
-def q12(x):
-    v = int(round(x * 4096)); assert 0 <= v < 2**31, x; return v
-G = {
-    "R5": g_r(Pn["R5"]), "C5": g_c(Pn["C5"]), "C30": g_c(Pn["C30"]), "C24": g_c(Pn["C24"]), "C25": g_c(Pn["C25"]),
-    "C26": g_c(Pn["C26"]), "C17": g_c(Pn["C17"]), "R29": g_r(Pn["R29"]), "R30": g_r(Pn["R30"]), "C28": g_c(Pn["C28"]),
-    "R31": g_r(Pn["R31"]), "C29": g_c(Pn["C29"]), "RIN": g_r(Pn["RIN"]), "COUT": g_c(Pn["COUT"]), "RP_L5": g_r(Pn["RP_L5"]),
-    "RPA": g_r(Pn["RPA"]), "RPB": g_r(Pn["RPB"]), "RPC": g_r(Pn["RPC"]), "SHORT": g_r(Pn["R_SHORT"]),
-    "C18": g_c(Pn["C18"]), "C19": g_c(Pn["C19"]), "R28": g_r(Pn["R28"]), "C20": g_c(Pn["C20"]), "C21": g_c(Pn["C21"]),
-    "R26": g_r(Pn["R26"]), "R27": g_r(Pn["R27"]), "C22": g_c(Pn["C22"]), "C23": g_c(Pn["C23"]), "C27": g_c(Pn["C27"]),
-    "LEAK": Pn["LEAK"] * 1e6,
-}
-lines.append("/* Tone-forming network (tools/clav_net_ref.py): conductances in uS, Q12 (capacitors: 2C/T). */")
-for k, v in G.items():
-    lines.append(f"#define NG_{k} {q12(v)}")
-lines.append(f"#define NET_N {net.N}")
-for i, n in enumerate(net.NODES):
-    lines.append(f"#define ND_{n} {i}")
-cp = net.companion()
-lines.append("/* Coupled windings La (IN-NB), Lb (NB-N1), Lc (gnd-N3): i = GM v + h, h' = GM v + AM i (GM uS Q20, AM Q30) */")
-lines.append("static const int32_t NET_GM[3][3] = {" + ", ".join("{" + ", ".join(str(int(round(v * 1e6 * 2**20))) for v in row) + "}" for row in cp["Gm"]) + "};")
-lines.append("static const int32_t NET_AM[3][3] = {" + ", ".join("{" + ", ".join(str(q30(v)) for v in row) + "}" for row in cp["Am"]) + "};")
-lines.append(f"#define NET_G_L5 {int(round(cp['g_l5'] * 1e6 * 2**20))}   /* L5 + copper, uS Q20: i = g v + h, h' = g v + a i */")
-lines.append(f"#define NET_A_L5 {q30(cp['a_l5'])}")
-cph = net.companion(2.0 / FS)                   # the same at half rate (the network's light mode, 22.05 kHz)
-lines.append("/* ... and at 22.05 kHz, for the light mode (the ISR halves the network's rate when it runs short of time) */")
-lines.append("static const int32_t NET_GM_H[3][3] = {" + ", ".join("{" + ", ".join(str(int(round(v * 1e6 * 2**20))) for v in row) + "}" for row in cph["Gm"]) + "};")
-lines.append("static const int32_t NET_AM_H[3][3] = {" + ", ".join("{" + ", ".join(str(q30(v)) for v in row) + "}" for row in cph["Am"]) + "};")
-lines.append(f"#define NET_G_L5_H {int(round(cph['g_l5'] * 1e6 * 2**20))}")
-lines.append(f"#define NET_A_L5_H {q30(cph['a_l5'])}")
-LEVER_MAX = net.LEVER_MAX
-lines.append(f"#define LEVER_MAX {LEVER_MAX}u")
-lines.append("/* The knee lever = R32 across IN: its conductance (uS Q12) per lever step. Step 0 = 10 ohm (silent), then a log")
-lines.append(f" * taper {Pn['R32_MIN']:g} ohm .. {Pn['R32_MAX']:g} ohm (ESTIMATE: R32's 'special grading' is not printed). */")
-lines.append(f"static const int32_t NET_G_R32[{LEVER_MAX + 1}] = {{")
-gl = [q12(g_r(net.r32(i))) for i in range(LEVER_MAX + 1)]
-for i in range(0, len(gl), 9):
-    lines.append("    " + ", ".join(str(v) for v in gl[i:i + 9]) + ",")
+# ---- the oscillator's wavetables (tools/clav_wave.py: the multivibrator shape, ESTIMATE) --------------------
+# One table per octave, band-limited for the 22.05 kHz rate the instrument runs at: table k serves fundamentals
+# 27.5 * 2^k .. 27.5 * 2^(k+1) Hz with harmonics up to 10.5 kHz. The square tables are the Concert's divider outputs.
+import clav_wave as wave
+WT_N, WT_OCT = 1024, 8
+lines.append(f"#define WT_N {WT_N}u")
+lines.append(f"#define WT_OCT {WT_OCT}u")
+lines.append(f"#define WT_INC0 {int(round(27.5 / 22050.0 * 2 ** 32))}u   /* the phase step of 27.5 Hz at 22.05 kHz */")
+for name, src in (("WT_PULSE", wave.cycle(1 << 15)), ("WT_SQUARE", wave.square(1 << 15))):
+    lines.append(f"static const int16_t {name}[WT_OCT][WT_N] = {{")
+    for k in range(WT_OCT):
+        nmax = int(10500.0 / (27.5 * 2 ** (k + 1)))
+        t = wave.bandlimited(src, nmax, WT_N)
+        t = t / np.abs(t).max()
+        lines.append("    {" + ",".join(str(int(round(v * 32767))) for v in t) + "},")
+    lines.append("};")
+lines.append("")
+
+# ---- decoding the fitted formant filters on the chip --------------------------------------------------------
+lines.append("/* 2^(i/256) for i = 0..256, Q30: the chip decodes the formant table's log2 values with it */")
+lines.append("static const int32_t EXP2_Q30[257] = {")
+e2 = [int(round(2 ** (i / 256) * (1 << 30))) for i in range(257)]
+e2[-1] = (1 << 31) - 1
+for i in range(0, 257, 8):
+    lines.append("    " + ", ".join(str(v) for v in e2[i:i + 8]) + ",")
 lines.append("};")
-# source and output scaling: source peak 1 mA at full scale (x = 32768 -> 1000 uA -> 65536000 units)
-lines.append("#define NET_ISRC_MUL 2000   /* Q15 source sample -> current units (1 mA at full scale) */")
-f = np.geomspace(50, 15000, 800)
-zpk = np.abs(net.ac(0, LEVER_MAX, f)).max()       # ohm: the no-tablet response's peak, lever fully open
-units = zpk * 1e-3 * 65536.0                       # V_OUT units for 1 mA at that frequency
-mul = int(round(65536 * 14000 / units))
-lines.append(f"#define NET_OUT_MUL {mul}   /* V_OUT units -> Q15, Q16: no tablets, lever open, 1 mA at the peak -> 14000 */")
+lines.append("")
+
+# ---- the knee lever ------------------------------------------------------------------------------------------
+# R32 shunts the network's input. The formant filters are fitted with the lever open; here its effect is a level:
+# the circuit model's average change (150 Hz..4 kHz, no tablets) for each lever step. Step 0: silent.
+import clav_net_ref as net
+LEVER_MAX = net.LEVER_MAX
+fl = np.geomspace(150, 4000, 60)
+h64 = np.abs(net.ac(0, LEVER_MAX, fl))
+lg = [0]
+for i in range(1, LEVER_MAX + 1):
+    d = np.mean(20 * np.log10(np.abs(net.ac(0, i, fl)) / h64))
+    lg.append(int(round(32767 * 10 ** (d / 20))))
+lines.append(f"#define LEVER_MAX {LEVER_MAX}u")
+lines.append("/* Knee lever gain (Q15) per step: the circuit model's level change with R32 (log taper, ESTIMATE). */")
+lines.append(f"static const uint16_t LEVER_GAIN[{LEVER_MAX + 1}] = {{")
+for i in range(0, len(lg), 13):
+    lines.append("    " + ", ".join(str(v) for v in lg[i:i + 13]) + ",")
+lines.append("};")
+lines.append("")
+
+# ---- the loudspeaker and cabinet (ESTIMATE: no data survives) -----------------------------------------------
+# A 10-inch moving coil in the amplifier cabinet: a bass resonance, a presence peak, the cone's roll-off.
+# RBJ biquads at 44.1 kHz, Q28: {b0, b1, b2, a1, a2}.
+FS2 = 44100.0
+
+
+def rbj(kind, f0, q, gain_db=0.0):
+    w = 2 * np.pi * f0 / FS2
+    c, s_ = np.cos(w), np.sin(w)
+    al = s_ / (2 * q)
+    A = 10 ** (gain_db / 40)
+    if kind == "hp":
+        b = [(1 + c) / 2, -(1 + c), (1 + c) / 2]; a = [1 + al, -2 * c, 1 - al]
+    elif kind == "lp":
+        b = [(1 - c) / 2, 1 - c, (1 - c) / 2]; a = [1 + al, -2 * c, 1 - al]
+    else:
+        b = [1 + al * A, -2 * c, 1 - al * A]; a = [1 + al / A, -2 * c, 1 - al / A]
+    return [v / a[0] for v in b] + [a[1] / a[0], a[2] / a[0]]
+
+
+SPK = [("hp", 100.0, 1.1, 0.0), ("peak", 2200.0, 1.0, 4.0), ("lp", 5500.0, 0.707, 0.0)]   # ESTIMATE
+lines.append("/* Speaker and cabinet (ESTIMATE): high-pass 100 Hz Q 1.1 (the cabinet's bass resonance), +4 dB peak at")
+lines.append(" * 2.2 kHz Q 1 (the cone's presence), low-pass 5.5 kHz Q 0.707 (its roll-off). 44.1 kHz, Q28. */")
+lines.append("static const int32_t SPEAKER[3][5] = {")
+for kind, f0, q, gdb in SPK:
+    lines.append("    {" + ", ".join(str(int(round(v * (1 << 28)))) for v in rbj(kind, f0, q, gdb)) + "},")
+lines.append("};")
 lines.append("")
 
 # ---- fine tuning (VR6 equivalent) ----------------------------------------------------------------------

@@ -4,8 +4,7 @@
 
 One netlist, two uses:
   * ac(config, lever, f)      the exact small-signal response V_OUT / I_V2 (complex nodal analysis)
-  * companion constants        what firmware/src/clav_net.h runs on (trapezoidal companion models), written into
-                               clav_tables.h by tools/gen_clav_tables.py
+  * tools/fit_formants.py      fits it for every tablet combination: the formant filters the firmware runs
 
 Tags: PRINTED (Fig. 4 / Fig. 2, 1952), CONCERT (Selmer Concert tone generator drawing DRG 1289, legible values),
 ESTIMATE (not documented anywhere we have; chosen to put the resonances in the audio band - change freely).
@@ -48,10 +47,11 @@ P = dict(
     # Inductances: ESTIMATES chosen from the printed capacitors so the resonances land in the audio band:
     #   L5 with C30 + COUT (400 pF) -> ~2 kHz peak, with C18 / C19 -> notches ~290 / 580 Hz;
     #   chain La+Lb (+2M) with C20 / C21 -> ~800 / 460 Hz; La with C27 -> ~800 Hz; Lc with C22 / C23 -> ~1.1 / 1.6 kHz
-    L5=15.0, R_L5=1e3, RP_L5=2e6,           # ESTIMATE: L5, its copper, its core loss (in parallel)
+    L5=15.0, R_L5=1e3, RP_L5=5e6,           # ESTIMATE: L5, its copper, its core loss (in parallel)
     LA=2.0, LB=2.0, LC=2.0,                 # ESTIMATE: windings L4+L2 (IN-NB), L1 (NB-N1), L3 (secondary)
-    RWA=200.0, RWB=200.0, RWC=200.0,        # ESTIMATE: their copper
-    RPA=60e3, RPB=60e3, RPC=60e3,           # ESTIMATE: core loss across each winding (Q ~ 6 near 800 Hz)
+    RWA=100.0, RWB=100.0, RWC=100.0,        # ESTIMATE: their copper
+    RPA=150e3, RPB=150e3, RPC=150e3,        # ESTIMATE: core loss across each winding (Q ~ 15 near 800 Hz, usual for
+                                            # iron-core audio coils; at Q ~ 6 tablets A, 5, 6, 7, 9 were faint)
     K=0.95,                                 # ESTIMATE: coupling between any two windings (one core), same sense
     R32_MAX=1e6, R32_MIN=50.0,              # ESTIMATE: the knee lever's track (lever step 1..64), log taper
     LEAK=1e-9,                              # 1 nS from every node to ground (numerical safety, inaudible)
