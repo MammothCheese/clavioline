@@ -513,7 +513,7 @@ static void draw_rail(void)                     /* the tablets, in two rows, on 
     cv_rect(2, 1, 236, 31, C_PANEL);
     cv_rect(2, 0, 236, 1, C_CHROME);
     for (i = 0; i < 8u; i++)
-        cv_tablet((i < 4u ? 7 : 15) + (int32_t)i * 27, 4, 24, 22, i < 4u ? C_TEAL : C_VIOLET,
+        cv_tablet((i < 4u ? 9 : 17) + (int32_t)i * 27, 4, 24, 22, i < 4u ? C_TEAL : C_VIOLET,
                   (int32_t)(tabs >> B2[i] & 1u), L2[i], C_PANEL);
     cv_blit(0, 40);
     cv_begin(240, 40, C_NAVY);
