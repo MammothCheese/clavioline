@@ -174,6 +174,12 @@ still did not sound convincing. An audit against the article found the reasons e
   itself: each P note peaks and falls about 10 dB within 40 ms, then holds. The control valve's screen-grid capacitor
   (C4 on Fig. 2) accounts for it, and its dynamics are fitted to that recording ([ENGINE.md](ENGINE.md)).
 
+- **Upper harmonics:** comparing a plain note (no tablets) with the same recording showed the firmware's C5 20–25 dB
+  short from the 12th harmonic up. The cause was ours, not the instrument's: one wavetable per octave cut a note near
+  the bottom of an octave at about 5.5 kHz. A table per half-octave keeps every note's harmonics to at least
+  7.4 kHz, and C5 now sits within a few decibels of the recording there. Other differences in that comparison (a
+  weak fundamental at C5, dips near 500 / 1500 / 2500 Hz) match the room's echo and were left alone.
+
 The network is now solved on a computer for all 8192 tablet combinations, from the same model, and each response is
 stored as five resonant filters. The FM-1 runs those instead of the circuit: the tablets still interact exactly as the
 model says, at a fraction of the cost.

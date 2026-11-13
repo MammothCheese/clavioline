@@ -1,5 +1,7 @@
 # Core checks (tests/check_engine.py core): key k = bit k, 0 = F3, 7 = C4, 19 = C5
-# the power-on preset is TRUMPET (vibrato II): STOPS (GLO), G#3 = vibrato II off, back
+# the power-on preset is CLAVIOLINE TONE: SELECT +22 = TRUMPET (the raw tone with vibrato II)
+# then STOPS (GLO), G#3 = vibrato II off, back
+20 enc 0 22
 50 btn 7
 60 keys 0x8
 70 keys 0

@@ -131,17 +131,19 @@ lines.append("};")
 lines.append("")
 
 # ---- the oscillator's wavetables (tools/clav_wave.py: the multivibrator shape, ESTIMATE) --------------------
-# One table per octave, band-limited for the 22.05 kHz rate the instrument runs at: table k serves fundamentals
-# 27.5 * 2^k .. 27.5 * 2^(k+1) Hz with harmonics up to 10.5 kHz. The square tables are the Concert's divider outputs.
+# One table per half-octave, band-limited for the 22.05 kHz rate the instrument runs at: table k serves fundamentals
+# 27.5 * 2^(k/2) .. 27.5 * 2^((k+1)/2) Hz with harmonics up to 10.5 kHz, so a note keeps its harmonics to at least
+# 10.5 kHz / sqrt 2 (7.4 kHz). The square tables are the Concert's divider outputs (an octave = 2 tables).
 import clav_wave as wave
-WT_N, WT_OCT = 1024, 8
+WT_N, WT_NT = 1024, 16
 lines.append(f"#define WT_N {WT_N}u")
-lines.append(f"#define WT_OCT {WT_OCT}u")
-lines.append(f"#define WT_INC0 {int(round(27.5 / 22050.0 * 2 ** 32))}u   /* the phase step of 27.5 Hz at 22.05 kHz */")
+lines.append(f"#define WT_NT {WT_NT}u")
+lines.append("static const uint32_t WT_EDGE[WT_NT] = {   /* the phase step (22.05 kHz) where table k starts */")
+lines.append("    " + ",".join(f"{int(round(27.5 * 2 ** (k / 2) / 22050.0 * 2 ** 32))}u" for k in range(WT_NT)) + "};")
 for name, src in (("WT_PULSE", wave.cycle(1 << 15)), ("WT_SQUARE", wave.square(1 << 15))):
-    lines.append(f"static const int16_t {name}[WT_OCT][WT_N] = {{")
-    for k in range(WT_OCT):
-        nmax = int(10500.0 / (27.5 * 2 ** (k + 1)))
+    lines.append(f"static const int16_t {name}[WT_NT][WT_N] = {{")
+    for k in range(WT_NT):
+        nmax = int(10500.0 / (27.5 * 2 ** ((k + 1) / 2)))
         t = wave.bandlimited(src, nmax, WT_N)
         t = t / np.abs(t).max()
         lines.append("    {" + ",".join(str(int(round(v * 32767))) for v in t) + "},")

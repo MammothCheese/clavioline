@@ -46,7 +46,7 @@ silence starts the same way.
 | SELECT | Presets (see below) | The voicing card |
 | GLO | STOPS mode: all the tablets, including vibrato, P and the sub-octaves | The tablet rail |
 | SAVE | Store the current tablets and coupler in the user slot shown | |
-| SEQ | Options: settings the original did not have (see below) | |
+| SEQ | Non-historical options: the pluck decay and an arpeggiator (see below) | |
 | KNOB 1 | Fine tuning, ±50 cents | The tuning control |
 
 Plucked sounds work as on the original. Choose Banjo, Mandolin or Harpsichord (they have **P** down), then flick the
@@ -78,17 +78,23 @@ The bottom line shows the audio engine's CPU load.
   was matched to a recording of a real Clavioline.
 - **Sub I / Sub II** add the octave and the two octaves below, softly (**p**) or loudly (**f**). They come from the Concert model.
 
-### Options
+### Non-historical options
 
 **SEQ** opens a page of settings that the original did not have. **SELECT** chooses one, **KNOB 1** changes it, and
 **SEQ** goes back.
 - **PLUCK DECAY** (off to start with; 0.3, 0.6, 1.2 or 2.5 s): every key press starts at full level and fades away.
   On the original, the player made this by flicking the knee lever back, which is awkward on the PRESETS knob.
 - **DECAY ON**: only on notes with tablet **P** down, or on all notes.
+- **ARPEGGIATOR** (off to start with; UP, DOWN, UP-DOWN or RANDOM): hold a chord and the notes play in turn, one
+  sixteenth note each. Every note starts afresh, so with **P** down each one plucks. MIDI notes and the STOPS drone
+  join in.
+- **ARP TEMPO**: 40 to 240 BPM (sixteenth notes), 120 to start with.
+- **ARP RANGE**: the held notes over 1, 2 or 3 octaves.
 
 ### Presets
 
-**SELECT** steps through 40 voicings, then 4 user slots:
+**SELECT** steps through 40 voicings in alphabetical order, then 4 user slots. The instrument always starts on
+**Clavioline Tone**; your user slots and options are kept. The voicings are:
 - **17** from the 1952 *Electronic Engineering* table, from Violin to Musical Saw;
 - **22** from the Selmer voicing tables quoted by *Sound On Sound*, such as Alto Sax, Church Organ and Harpsichord;
 - **an organ tone** from the Concert's sub-octaves.

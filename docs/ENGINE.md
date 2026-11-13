@@ -19,8 +19,8 @@ After 100 ms of silence the engine rests and does no work until a key goes down.
 | Stage | How | Source |
 |---|---|---|
 | Notes | A count per MIDI note from keys, MIDI in and the STOPS drone; the highest wins. The pitch changes at once; the gate stays open while any note is held, so legato never re-attacks. After silence the oscillator restarts from rest | Fig. 2 key ladder and contacts (documented) |
-| Oscillator | Band-limited wavetables, one per octave (harmonics up to 10.5 kHz), of the multivibrator's wave as the control valve passes it on: a sharp drop, an exponential recovery, uneven clipping | "trapezoidal in form" (documented); the shape is an **estimate** (`tools/clav_wave.py`) |
-| Sub I / II | Square wavetables at a half and a quarter of the oscillator's phase (the dividers flip on its periods); **p** and **f** levels | Concert drawing (documented); levels **estimated** |
+| Oscillator | Band-limited wavetables, one per half-octave (harmonics up to 10.5 kHz, so every note keeps them to at least 7.4 kHz), of the multivibrator's wave as the control valve passes it on: a sharp drop, an exponential recovery, uneven clipping | "trapezoidal in form" (documented); the shape is an **estimate** (`tools/clav_wave.py`) |
+| Sub I / II | Square wavetables (two and four tables lower) at a half and a quarter of the oscillator's phase (the dividers flip on its periods); **p** and **f** levels | Concert drawing (documented); levels **estimated** |
 | Vibrato | Sine LFO at 4.5 / 5.5 / 6.5 Hz; pitch ±8.4 cents, ±32 with AMP; ±3 % amplitude | Rates documented, depth ratio derived; depth and AM **estimated** |
 | Control valve (attack) | The printed cathode network, discretised exactly over 8 output samples; tablet P selects the short time constant; gain through a remote-cut-off curve. On release the valve's own cathode current cuts it off in a few ms | Time constants derived (19.2 ms; 1.54 ms with P); curve and release **estimated** |
 | Control valve (screen grid) | While the valve is shut, its screen capacitor (C4, fed through R4) charges fully; when the valve opens, the screen current drains it, so the valve starts with extra gain that sags to its steady level. Opening fast (P) gives a sharp peak, about 13 dB over the steady level; the slow normal opening a swell of about 4 dB. Notes then sustain while held | R4, C4 on Fig. 2 (values not printed); the dynamics **fitted to a recording** (below) |
@@ -115,14 +115,20 @@ from the lowest note, 87 Hz, up), and C17 is left out while V is up (within 0.07
 | Speaker | see the signal chain | **Estimate** |
 | Pitch | the FM-1's F3 key = F3 with the coupler at MED | **Estimate** |
 
-## Options (not on the original)
+## Non-historical options
 
-**SEQ** opens the options page; **SEQ** or **HOME** closes it. **SELECT** chooses a setting and **KNOB 1** changes it.
+**SEQ** opens the page; **SEQ** or **HOME** closes it. **SELECT** chooses a setting and **KNOB 1** changes it.
 
 | Setting | Values | What it does |
 |---|---|---|
 | PLUCK DECAY | **OFF** (default), 0.3, 0.6, 1.2, 2.5 s | Each key press starts at full level, then fades 40 dB over the time chosen, standing in for flicking the knee lever back |
 | DECAY ON | **P NOTES** (default), ALL NOTES | Only while tablet P is down, or on every note |
+| ARPEGGIATOR | **OFF** (default), UP, DOWN, UP-DOWN, RANDOM | The held notes (keys, MIDI, the drone) in turn, low to high; the gate open for 60 % of each step, so every note re-attacks through the control valve (P plucks each one). Runs in the main loop on the millisecond clock |
+| ARP TEMPO | 40–240 BPM in steps of 2, **120** | Sixteenth notes |
+| ARP RANGE | **1**, 2, 3 octaves | The held notes repeated an octave and two octaves up |
+
+Settings version 6: version 3–5 settings load with everything kept. Every power-on starts on the CLAVIOLINE TONE
+preset.
 
 ## Tests
 
@@ -146,7 +152,8 @@ and compares the FM-1's formant filter with the model:
 | Vibrato I / II / III | 4.49 / 5.52 / 6.49 Hz; deep / shallow 3.65 |
 | STOPS mode note buttons | SEL plays D4 (293.7 Hz) |
 | Sub I f | the octave below at +3.1 dB re the fundamental |
-| Pluck decay 1.2 s (P notes, all notes); off | 37.2 dB down from 0.2 s to 1.3 s; off 0.0 dB |
+| Pluck decay 1.2 s (P notes, all notes); off | 36.9 dB down from 0.2 s to 1.3 s; off 0.0 dB |
+| Arpeggiator UP and UP-DOWN over 2 octaves; off | each step on the right note (C E G…; C E C5 E5 C5 E C…), a gap of 63 dB or more before each; off plays the highest note |
 | The FM-1's formant filter against the model | within 0.60 dB (48 combinations) |
 
 `tests/run_tests.sh` adds the platform's update-path tests after a firmware build. `tests/scripts/demo.txt` plays a

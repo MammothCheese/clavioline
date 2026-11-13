@@ -1,0 +1,33 @@
+# The arpeggiator (tests/check_engine.py arp): TRUMPET, vibrato off, P on; then SEQ: ARPEGGIATOR -> UP (120 BPM, 1 octave)
+20 enc 0 22
+50 btn 7
+60 keys 0x8
+70 keys 0
+80 keys 0x800000
+90 keys 0
+100 btn 7
+200 btn 11
+250 enc 0 2
+300 enc 2 1
+400 shot
+500 btn 11
+# hold C4 E4 G4 for 2 s: C E G C E G ..., a sixteenth (125 ms) each
+700 keys 0x4880
+2700 keys 0
+# SEQ: UP-DOWN, 2 octaves; back. Hold C4 E4: C E C5 E5 C5 E C ...
+2900 btn 11
+3000 enc 2 2
+3100 enc 0 2
+3200 enc 2 1
+3300 shot
+3400 btn 11
+3600 keys 0x880
+5600 keys 0
+# SEQ: arpeggiator OFF; C4 E4 held: E4 alone sounds (highest note)
+5800 btn 11
+5900 enc 0 -2
+6000 enc 2 -4
+6100 btn 11
+6300 keys 0x880
+7300 keys 0
+7500 end

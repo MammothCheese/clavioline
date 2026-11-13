@@ -9,10 +9,11 @@
  *   MASTER      the volume (platform.c)
  *   OCT- OCT+   the coupler LOW / MED / HIGH (S1)
  *   ALGORITHM   the keyboard window, +0 / +1 octave (the FM-1's 27 keys over the original's 36, F..E)
- *   SELECT      presets: the 1952 Table 1, the Selmer voicings quoted by Sound On Sound, 4 user slots
+ *   SELECT      presets A..Z (the 1952 Table 1, the Selmer voicings quoted by Sound On Sound), then 4 user slots;
+ *               every power-on starts on CLAVIOLINE TONE
  *   SAVE        store the tablets and the coupler in the user slot shown
  *   GLO         STOPS mode (vibrato, P and the sub-octaves are tablets there); FX SEL ENV LFO EDIT do nothing here
- *   SEQ         OPTIONS (settings the original did not have)
+ *   SEQ         NON-HISTORICAL OPTIONS: the pluck decay and an arpeggiator (the original had neither)
  *   KNOB 1      fine tune +-50 cents (VR6)
  * STOPS mode (GLO or HOME back; nothing is lost)
  *   white keys  F3..E5: tablets 1 2 3 4 5 6 7 8 9 O A B V P;  F5: all tone tablets off
@@ -111,10 +112,10 @@ static int32_t wt_read(const int16_t *t, uint32_t ph)   /* a wavetable, linearly
     return a + (((b - a) * (int32_t)fr) >> 16);
 }
 
-static uint32_t wt_octave(uint32_t inc)         /* the table for a phase step (22.05 kHz) */
+static uint32_t wt_table(uint32_t inc)          /* the half-octave table for a phase step (22.05 kHz) */
 {
     uint32_t k = 0;
-    while (k + 1u < WT_OCT && inc >= (WT_INC0 << (k + 1u))) k++;
+    while (k + 1u < WT_NT && inc >= WT_EDGE[k + 1u]) k++;
     return k;
 }
 
@@ -188,9 +189,9 @@ static void app_audio(int32_t *out, uint32_t n)
     s2 = (tabs & TB(T_SUB2F) ? SUB_F : 0) + (tabs & TB(T_SUB2P) ? SUB_P : 0);
 
     inc2 = inc << 1;                            /* the phase step at 22.05 kHz */
-    ko = wt_octave(inc2);                       /* band-limited tables for this pitch, and an octave or two below */
-    ko1 = ko ? ko - 1u : 0u;
-    ko2 = ko > 1u ? ko - 2u : 0u;
+    ko = wt_table(inc2);                        /* band-limited tables for this pitch, and an octave or two below */
+    ko1 = ko > 1u ? ko - 2u : 0u;
+    ko2 = ko > 3u ? ko - 4u : 0u;
     tp = WT_PULSE[ko]; ts1 = WT_SQUARE[ko1]; ts2 = WT_SQUARE[ko2];
 
     for (i = 0; i < n; i += 2u) {
@@ -322,8 +323,11 @@ static struct {
     uint16_t preset; uint16_t pad;
     setup_t user[NUSER];
     uint8_t decay, decay_all, pad2[2];          /* OPTIONS: the pluck decay (0 = off, 1..4), on all notes */
+    uint8_t arp, arp_bpm, arp_oct, pad3;        /* OPTIONS: the arpeggiator (mode, tempo / 2, octaves 1..3) */
 } set;
-#define SET_VER 5u
+#define SET_VER 6u
+#define SET_V5_SIZE ((uint32_t)((uint8_t *)&set.arp - (uint8_t *)&set))   /* (versions 3..5 ended there) */
+enum { ARP_OFF, ARP_UP, ARP_DOWN, ARP_UPDOWN, ARP_RANDOM, NARP };
 
 static uint32_t lever = 48;                     /* the knee lever (not saved): 3/4 open at power-on */
 static uint8_t cnt[128];                        /* how many keys / MIDI notes / the drone hold each note */
@@ -332,18 +336,66 @@ static int32_t top = -1, last_note = -1;
 static void note_add(uint32_t n) { if (n < 128u && cnt[n] < 255u) cnt[n]++; }
 static void note_del(uint32_t n) { if (n < 128u && cnt[n]) cnt[n]--; }
 
+static void set_pitch(int32_t n)                /* the oscillator's step for a note, through the coupler */
+{
+    int32_t p = n + 12 * set.coupler;
+    if (p < 0) p = 0;
+    if (p > 131) p = 131;
+    a_inc = (uint32_t)(((uint64_t)(INC_C9[p % 12] >> (10 - p / 12)) * TUNE_Q16[set.tune + 50]) >> 16);
+}
+
 static void update_voice(void)                  /* the highest held note wins, as the key ladder does */
 {
-    int32_t n, p;
+    int32_t n;
+    if (set.arp) return;                        /* (the arpeggiator plays the held notes instead) */
     for (n = 127; n >= 0 && !cnt[n]; n--) ;
     top = n;
     if (n < 0) { a_held = 0; return; }
     last_note = n;
-    p = n + 12 * set.coupler;
-    if (p < 0) p = 0;
-    if (p > 131) p = 131;
-    a_inc = (uint32_t)(((uint64_t)(INC_C9[p % 12] >> (10 - p / 12)) * TUNE_Q16[set.tune + 50]) >> 16);
+    set_pitch(n);
     a_held = 1;                                 /* (pitch first, then the gate) */
+}
+
+/* The arpeggiator (OPTIONS; not on the original): the held notes in turn, a sixteenth note each, the gate open for
+ * the first 60% of each step so every note starts afresh (P plucks each one). Called from the main loop. */
+static struct { uint32_t on, step, t_next, t_off, rnd; int32_t note; } arp;
+
+static void arp_run(void)
+{
+    uint8_t nt[48];
+    uint32_t n = 0, len, i, o, period;
+    int32_t k;
+    if (!set.arp) {
+        if (arp.on) { arp.on = 0; update_voice(); }
+        return;
+    }
+    for (o = 0; o < set.arp_oct; o++)           /* the held notes, low to high, over 1..3 octaves */
+        for (k = 0; k < 128; k++)
+            if (cnt[k] && k + 12 * (int32_t)o < 128 && n < sizeof nt) nt[n++] = (uint8_t)(k + 12 * (int32_t)o);
+    if (!n) {                                   /* nothing held: silence, and the next note starts at once */
+        if (arp.on) { arp.on = 0; a_held = 0; top = -1; }
+        return;
+    }
+    period = 15000u / ((uint32_t)set.arp_bpm * 2u);   /* a sixteenth note, ms */
+    if (!arp.on) { arp.on = 1; arp.step = 0; arp.t_next = fm1_ms; }
+    if ((int32_t)(fm1_ms - arp.t_next) >= 0) {
+        len = set.arp == ARP_UPDOWN && n > 1u ? 2u * n - 2u : n;
+        i = arp.step % len;
+        if (set.arp == ARP_DOWN) i = n - 1u - i;
+        else if (set.arp == ARP_UPDOWN && i >= n) i = len - i;
+        else if (set.arp == ARP_RANDOM) { arp.rnd = arp.rnd * 1664525u + 1013904223u; i = (arp.rnd >> 16) % n; }
+        arp.step++;
+        arp.note = nt[i];
+        top = last_note = arp.note;
+        set_pitch(arp.note);
+        a_held = 1;
+        a_pluck++;
+        arp.t_off = fm1_ms + period * 6u / 10u;
+        arp.t_next += period;
+        if ((int32_t)(fm1_ms - arp.t_next) >= 0) arp.t_next = fm1_ms + period;   /* (a long stall: no catching up) */
+    } else if (a_held && (int32_t)(fm1_ms - arp.t_off) >= 0) {
+        a_held = 0;                             /* the gap that lets the next note start afresh */
+    }
 }
 
 /* ---- presets ------------------------------------------------------------------------------------------ */
@@ -354,31 +406,54 @@ static void update_voice(void)                  /* the highest held note wins, a
 #define T(x) TB(T_##x)
 enum { LOW = -1, MED = 0, HIGH = 1 };
 static const struct { const char *name; uint32_t tabs; int8_t coupler; } PRESET[] = {
-    /* Electronic Engineering, Oct. 1952, Table 1 ("Med.-High" played MED; "O or V" as two presets) */
-    {"VIOLIN O", T(1) | T(O) | V2 | AMP, HIGH}, {"VIOLIN V", T(1) | T(V) | V2 | AMP, HIGH},
-    {"VIOLA O", T(1) | T(O) | V2 | AMP, MED}, {"VIOLA V", T(1) | T(V) | V2 | AMP, MED},
-    {"TENOR SAX", T(4) | V3, MED}, {"TRUMPET", V2, MED}, {"TROMBONE", T(3) | V2, LOW},
-    {"HORN", T(2) | T(3) | V3 | AMP, LOW}, {"BASSOON", T(3) | T(7), LOW}, {"CORNET", T(6) | V1, MED},
-    {"OBOE", T(1) | T(4) | T(8) | V1, MED}, {"FLUTE", T(3) | T(4) | T(5) | V1, HIGH},
-    {"PICCOLO", T(1) | T(4) | T(O) | V2, HIGH}, {"HAWAIIAN GUITAR", T(1) | T(4) | T(6) | T(P) | V2 | AMP, MED},
-    {"BANJO", T(3) | T(4) | T(B) | T(P), MED}, {"MANDOLIN", T(3) | T(6) | T(8) | T(P), HIGH},
-    {"MUSICAL SAW", T(3) | T(B) | V2 | AMP, HIGH},
-    /* Selmer voicing tables as quoted by Sound On Sound, March 2007 (where not already above) */
-    {"ALTO SAX", T(2) | T(3) | V2, MED}, {"ARABIAN FLUTE", T(1) | T(4) | T(8) | V1, HIGH},
-    {"BAGPIPE", T(1) | T(9) | V1, MED}, {"BASS SAX", T(4) | V3, LOW}, {"BASS VIOLIN", T(1) | T(V) | V1, LOW},
-    {"CELLO", T(1) | T(V) | V2, LOW}, {"CHURCH ORGAN A", T(4) | T(6), LOW}, {"CHURCH ORGAN B", T(4) | T(9), LOW},
-    {"CHURCH ORGAN C", T(6), LOW}, {"ELECTRIC GUITAR", T(4) | T(P) | V2, MED}, {"ENGLISH HORN", T(2) | T(3) | T(B), MED},
-    {"HARPSICHORD", T(3) | T(5) | T(6) | T(8) | T(P), HIGH}, {"FIFE", T(B) | T(O), HIGH}, {"FRENCH HORN", T(3), LOW},
-    {"HUNTING HORN", T(3) | V3 | AMP, LOW}, {"MUTED GYPSY VLN", T(1) | T(O) | V2 | AMP, MED}, {"ORCH HORN", T(3) | V2, LOW},
-    {"REED PIPE", T(B), HIGH}, {"THEATRE ORGAN", T(4) | V3 | AMP, MED},
-    {"CLAVIOLINE TONE", T(3) | T(4) | T(6) | V3 | AMP, MED}, {"VOX CELESTA", T(4) | T(5) | T(6) | V3 | AMP, MED},
-    {"ZITHER", T(1) | T(4) | T(6) | T(P) | V3 | AMP, MED},
-    /* the Concert's Sub I / Sub II 'f' on the raw tone: "an organ tone" (Sound On Sound) */
-    {"ORGAN SUB", T(SUB1F) | T(SUB2F), MED},
+    /* in alphabetical order. EE: Electronic Engineering, Oct. 1952, Table 1 ("Med.-High" played MED; "O or V" as two
+     * presets); SOS: the Selmer voicing tables as quoted by Sound On Sound, March 2007; ORGAN SUB: the Concert's Sub I
+     * and Sub II 'f' on the raw tone, "an organ tone" (SOS) */
+    {"ALTO SAX", T(2) | T(3) | V2, MED},                            /* SOS */
+    {"ARABIAN FLUTE", T(1) | T(4) | T(8) | V1, HIGH},               /* SOS */
+    {"BAGPIPE", T(1) | T(9) | V1, MED},                             /* SOS */
+    {"BANJO", T(3) | T(4) | T(B) | T(P), MED},                      /* EE */
+    {"BASS SAX", T(4) | V3, LOW},                                   /* SOS */
+    {"BASS VIOLIN", T(1) | T(V) | V1, LOW},                         /* SOS */
+    {"BASSOON", T(3) | T(7), LOW},                                  /* EE */
+    {"CELLO", T(1) | T(V) | V2, LOW},                               /* SOS */
+    {"CHURCH ORGAN A", T(4) | T(6), LOW},                           /* SOS */
+    {"CHURCH ORGAN B", T(4) | T(9), LOW},                           /* SOS */
+    {"CHURCH ORGAN C", T(6), LOW},                                  /* SOS */
+    {"CLAVIOLINE TONE", T(3) | T(4) | T(6) | V3 | AMP, MED},        /* SOS; the preset at power-on */
+    {"CORNET", T(6) | V1, MED},                                     /* EE */
+    {"ELECTRIC GUITAR", T(4) | T(P) | V2, MED},                     /* SOS */
+    {"ENGLISH HORN", T(2) | T(3) | T(B), MED},                      /* SOS */
+    {"FIFE", T(B) | T(O), HIGH},                                    /* SOS */
+    {"FLUTE", T(3) | T(4) | T(5) | V1, HIGH},                       /* EE */
+    {"FRENCH HORN", T(3), LOW},                                     /* SOS */
+    {"HARPSICHORD", T(3) | T(5) | T(6) | T(8) | T(P), HIGH},        /* SOS */
+    {"HAWAIIAN GUITAR", T(1) | T(4) | T(6) | T(P) | V2 | AMP, MED}, /* EE */
+    {"HORN", T(2) | T(3) | V3 | AMP, LOW},                          /* EE */
+    {"HUNTING HORN", T(3) | V3 | AMP, LOW},                         /* SOS */
+    {"MANDOLIN", T(3) | T(6) | T(8) | T(P), HIGH},                  /* EE */
+    {"MUSICAL SAW", T(3) | T(B) | V2 | AMP, HIGH},                  /* EE */
+    {"MUTED GYPSY VLN", T(1) | T(O) | V2 | AMP, MED},               /* SOS */
+    {"OBOE", T(1) | T(4) | T(8) | V1, MED},                         /* EE */
+    {"ORCH HORN", T(3) | V2, LOW},                                  /* SOS */
+    {"ORGAN SUB", T(SUB1F) | T(SUB2F), MED},                        /* the Concert */
+    {"PICCOLO", T(1) | T(4) | T(O) | V2, HIGH},                     /* EE */
+    {"REED PIPE", T(B), HIGH},                                      /* SOS */
+    {"TENOR SAX", T(4) | V3, MED},                                  /* EE */
+    {"THEATRE ORGAN", T(4) | V3 | AMP, MED},                        /* SOS */
+    {"TROMBONE", T(3) | V2, LOW},                                   /* EE */
+    {"TRUMPET", V2, MED},                                           /* EE */
+    {"VIOLA O", T(1) | T(O) | V2 | AMP, MED},                       /* EE */
+    {"VIOLA V", T(1) | T(V) | V2 | AMP, MED},                       /* EE */
+    {"VIOLIN O", T(1) | T(O) | V2 | AMP, HIGH},                     /* EE */
+    {"VIOLIN V", T(1) | T(V) | V2 | AMP, HIGH},                     /* EE */
+    {"VOX CELESTA", T(4) | T(5) | T(6) | V3 | AMP, MED},            /* SOS */
+    {"ZITHER", T(1) | T(4) | T(6) | T(P) | V3 | AMP, MED},          /* SOS */
 };
 #undef T
 #define NFACT (sizeof PRESET / sizeof PRESET[0])
 #define NPRESET (NFACT + NUSER)
+#define P_CLAVIOLINE 11u                        /* CLAVIOLINE TONE: every power-on starts here */
 static uint32_t edited;                         /* the tablets differ from the preset shown */
 
 static void apply_preset(uint32_t i)
@@ -566,30 +641,39 @@ static void draw_status(const char *msg, uint16_t colour)
     cv_blit(0, 218);
 }
 
-#define NOPT 2u
-static void draw_options(uint32_t sel)          /* OPTIONS: settings the original did not have */
+#define NOPT 5u
+static void draw_options(uint32_t sel)          /* NON-HISTORICAL OPTIONS: settings the original did not have */
 {
-    static const char *const NAME[NOPT] = {"PLUCK DECAY", "DECAY ON"};
+    static const char *const NAME[NOPT] = {"PLUCK DECAY", "DECAY ON", "ARPEGGIATOR", "ARP TEMPO", "ARP RANGE"};
     static const char *const DEC[5] = {"OFF", "0.3 S", "0.6 S", "1.2 S", "2.5 S"};
-    uint32_t i;
+    static const char *const ARP[NARP] = {"OFF", "UP", "DOWN", "UP-DOWN", "RANDOM"};
+    static const char *const OCT[3] = {"1 OCT", "2 OCT", "3 OCT"};
+    char bpm[8], *q = bpm;
+    uint32_t i, b = (uint32_t)set.arp_bpm * 2u;
+    if (b >= 100u) *q++ = (char)('0' + b / 100u);
+    *q++ = (char)('0' + b / 10u % 10u);
+    *q++ = (char)('0' + b % 10u);
+    *q++ = ' '; *q++ = 'B'; *q++ = 'P'; *q++ = 'M'; *q = 0;
     draw_title_text("OPTIONS", C_TEAL);
+    cv_begin(240, 16, C_NAVY);
+    cv_text((240 - text_w(&FONT_S, "NON-HISTORICAL")) / 2, 0, &FONT_S, "NON-HISTORICAL", C_AMBER);
+    cv_blit(0, 40);
     for (i = 0; i < NOPT; i++) {
-        const char *v = i == 0u ? DEC[set.decay] : set.decay_all ? "ALL NOTES" : "P NOTES";
+        const char *v = i == 0u ? DEC[set.decay] : i == 1u ? (set.decay_all ? "ALL NOTES" : "P NOTES")
+                      : i == 2u ? ARP[set.arp] : i == 3u ? bpm : OCT[set.arp_oct - 1u];
         int32_t on = i == sel;
-        cv_begin(240, 44, C_NAVY);
-        if (on) { cv_rect(4, 2, 232, 40, C_PANEL); cv_rect(4, 2, 3, 40, C_TEAL); }
-        cv_text(16, 4, &FONT_S, NAME[i], on ? C_IVORY : C_FAINT);
-        cv_disc(22, 30, 3, on ? C_ORANGE : C_PANEL);
-        cv_text(34, 22, &FONT_S, v, on ? C_ORANGE : C_FAINT);
-        cv_blit(0, 48 + (int32_t)i * 48);
+        cv_begin(240, 28, C_NAVY);
+        if (on) { cv_rect(4, 1, 232, 26, C_PANEL); cv_rect(4, 1, 3, 26, C_TEAL); }
+        cv_text(16, 6, &FONT_S, NAME[i], on ? C_IVORY : C_FAINT);
+        cv_disc(140, 14, 3, on ? C_ORANGE : C_PANEL);
+        cv_text(150, 6, &FONT_S, v, on ? C_ORANGE : C_FAINT);
+        cv_blit(0, 58 + (int32_t)i * 28);
     }
-    cv_begin(240, 64, C_NAVY);                  /* (a canvas holds at most 240 x 64) */
-    cv_text(12, 0, &FONT_S, "NOT ON THE ORIGINAL", C_FAINT);
-    cv_text(12, 18, &FONT_S, "SELECT  CHOOSE", C_CHROME);
-    cv_text(12, 33, &FONT_S, "KNOB 1  CHANGE", C_CHROME);
-    cv_text(12, 48, &FONT_S, "SEQ     BACK", C_CHROME);
-    cv_blit(0, 154);
-    lcd_fill(0, 218, 240, 22, C_NAVY);
+    cv_begin(240, 36, C_NAVY);
+    cv_text(12, 2, &FONT_S, "SELECT CHOOSE  KNOB 1 CHANGE", C_CHROME);
+    cv_text(12, 18, &FONT_S, "SEQ BACK", C_CHROME);
+    cv_blit(0, 200);
+    lcd_fill(0, 236, 240, 4, C_NAVY);
 }
 
 static char *put_pct(char *p, uint32_t pm)      /* per mille -> "nn%" */
@@ -643,18 +727,19 @@ static void app_main(void)
     uint8_t key_note[27] = {0};
     uint32_t kon = 0;                           /* keys whose note is in the stack */
 
-    if (settings_load(&set, sizeof set) || set.ver != SET_VER || set.coupler < -1 || set.coupler > 1 || set.window > 1u
-        || set.tune < -50 || set.tune > 50 || set.preset >= NPRESET || set.decay > 4u || set.decay_all > 1u) {
-        if ((set.ver == 3u || set.ver == 4u) && set.preset < NPRESET && set.decay <= 4u && set.decay_all <= 1u) {
-            set.ver = SET_VER;                  /* from versions 3, 4: keep everything; P is an attack, no decay */
-            set.decay = 0;
-        } else {
-        memset(&set, 0, sizeof set);
+    if (settings_load(&set, sizeof set) && settings_load(&set, SET_V5_SIZE) == 0 && set.ver >= 3u && set.ver <= 5u) {
+        if (set.ver < 5u) set.decay = 0;        /* from versions 3, 4, 5: keep everything; P is an attack, no decay */
         set.ver = SET_VER;
-        for (k = 0; k < NUSER; k++) set.user[k].tabs = 0;
-        apply_preset(5);                        /* TRUMPET: the raw tone with vibrato II */
-        }
+        set.arp = ARP_OFF; set.arp_bpm = 60; set.arp_oct = 1;
     }
+    if (set.ver != SET_VER || set.coupler < -1 || set.coupler > 1 || set.window > 1u || set.tune < -50 || set.tune > 50
+        || set.preset >= NPRESET || set.decay > 4u || set.decay_all > 1u || set.arp >= NARP || set.arp_bpm < 20u
+        || set.arp_bpm > 120u || set.arp_oct < 1u || set.arp_oct > 3u) {
+        memset(&set, 0, sizeof set);            /* nothing usable stored: afresh */
+        set.ver = SET_VER;
+        set.arp_bpm = 60; set.arp_oct = 1;
+    }
+    apply_preset(P_CLAVIOLINE);                 /* every power-on starts on CLAVIOLINE TONE (user slots are kept) */
     fm_compute(&fm_buf[0], set.tabs);           /* the formant filter before the sound starts */
     net_tabs = set.tabs & NET_TABS;
     a_tabs = set.tabs;
@@ -733,10 +818,14 @@ static void app_main(void)
                 msg = "SELECT A USER SLOT FIRST"; t_msg = fm1_ms;
             }
         }
-        if (opts && (e = fm1_enc_take(ENC_SELECT)) != 0) osel = (osel + (e > 0 ? 1u : NOPT - 1u)) % NOPT;
+        if (opts && (e = fm1_enc_take(ENC_SELECT)) != 0) osel = (uint32_t)(((int32_t)osel + e % (int32_t)NOPT + (int32_t)NOPT) % (int32_t)NOPT);
         if (opts && (e = fm1_enc_take(ENC_KNOB1)) != 0) {
-            if (osel == 0u) { int32_t d = (int32_t)set.decay + e; set.decay = (uint8_t)(d < 0 ? 0 : d > 4 ? 4 : d); }
-            else set.decay_all ^= 1u;
+            int32_t d;
+            if (osel == 0u) { d = (int32_t)set.decay + e; set.decay = (uint8_t)(d < 0 ? 0 : d > 4 ? 4 : d); }
+            else if (osel == 1u) set.decay_all ^= 1u;
+            else if (osel == 2u) { d = (int32_t)set.arp + e; set.arp = (uint8_t)(d < 0 ? 0 : d >= NARP ? NARP - 1 : d); changed = 1; }
+            else if (osel == 3u) { d = (int32_t)set.arp_bpm + e; set.arp_bpm = (uint8_t)(d < 20 ? 20 : d > 120 ? 120 : d); }
+            else { d = (int32_t)set.arp_oct + e; set.arp_oct = (uint8_t)(d < 1 ? 1 : d > 3 ? 3 : d); }
             dirty = 1; t_change = fm1_ms;
         }
         if (!opts && (e = fm1_enc_take(ENC_SELECT)) != 0) {
@@ -764,6 +853,8 @@ static void app_main(void)
 
         midi_in();
         if (changed || midi_dirty) { midi_dirty = 0; update_voice(); }
+        arp_run();
+        if (set.arp && arp.on && changed) set_pitch(arp.note);   /* (a coupler or tune change mid-note) */
         a_tabs = set.tabs;
         a_decay = set.decay ? DECAY_Q30[set.decay - 1u] : 0u;
         a_decay_all = set.decay_all;
@@ -814,7 +905,8 @@ static void app_main(void)
         }
         idle_ok = 1;
         if (opts) {
-            uint32_t st = osel | (uint32_t)set.decay << 4 | (uint32_t)set.decay_all << 8;
+            uint32_t st = osel | (uint32_t)set.decay << 4 | (uint32_t)set.decay_all << 8 | (uint32_t)set.arp << 9
+                        | (uint32_t)set.arp_bpm << 12 | (uint32_t)set.arp_oct << 20;
             if (st != drawn_opt) { drawn_opt = st; draw_options(osel); }
         } else {
         if (stops != drawn_stops) { drawn_stops = stops; draw_title(stops); drawn_st = ~0u; }

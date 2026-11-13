@@ -1,5 +1,7 @@
 # Stage 4 checks (tests/check_engine.py stage4). STOPS black keys: F#3 III (bit 1), G#3 II (3), A#3 I (5), C#4 AMP (8)
 # TRUMPET has vibrato II: STOPS, II off, I on, back
+# the power-on preset is CLAVIOLINE TONE: SELECT +22 = TRUMPET (the raw tone with vibrato II)
+20 enc 0 22
 50 btn 7
 60 keys 0x8
 70 keys 0

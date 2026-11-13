@@ -1,6 +1,5 @@
-# demo: an original phrase on six presets (tests/scripts/demo.txt). Power-on preset TRUMPET
+# demo: an original phrase on six presets (tests/scripts/demo.txt). Power-on preset CLAVIOLINE TONE
 # CLAVIOLINE TONE
-300 enc 0 31
 500 keys 0x80
 870 keys 0x880
 900 keys 0x800
@@ -22,7 +21,7 @@
 4700 keys 0x80
 5900 keys 0
 # VIOLIN V
-6600 enc 0 -35
+6600 enc 0 26
 6800 keys 0x80
 7170 keys 0x880
 7200 keys 0x800
@@ -44,7 +43,7 @@
 11000 keys 0x80
 12200 keys 0
 # OBOE
-12900 enc 0 9
+12900 enc 0 -12
 13100 keys 0x80
 13470 keys 0x880
 13500 keys 0x800
@@ -66,7 +65,7 @@
 17300 keys 0x80
 18500 keys 0
 # FLUTE
-19200 enc 0 1
+19200 enc 0 -9
 19400 keys 0x80
 19770 keys 0x880
 19800 keys 0x800
@@ -88,7 +87,7 @@
 23600 keys 0x80
 24800 keys 0
 # TRUMPET
-25500 enc 0 -6
+25500 enc 0 17
 25700 keys 0x80
 26070 keys 0x880
 26100 keys 0x800
@@ -110,7 +109,7 @@
 29900 keys 0x80
 31100 keys 0
 # CELLO
-31800 enc 0 17
+31800 enc 0 -26
 32000 keys 0x80
 32370 keys 0x880
 32400 keys 0x800

@@ -172,9 +172,36 @@ def pluck(path):
     check("P notes: every note in a run re-peaks", max(first) < -7, f"40 ms after each peak: {min(first):.1f} .. {max(first):.1f} dB")
 
 
+def arp(path):
+    """the arpeggiator (tests/scripts/arp.txt): the held notes in turn, a sixteenth note (125 ms) each, re-attacked"""
+    x = load(path)
+    C4, E4, G4, C5, E5 = 261.63, 329.63, 392.0, 523.25, 659.26
+
+    def steps(t0, n):
+        return [f0_acf(seg(x, t0 + k * 125 + 25, t0 + k * 125 + 70)) for k in range(n)]
+
+    def names(fs):
+        return " ".join(f"{f:.0f}" for f in fs)
+
+    def match(fs, want):
+        return all(abs(1200 * np.log2(f / w)) < 30 for f, w in zip(fs, want))
+
+    got = steps(700, 9)
+    check("UP: C E G C E G ...", match(got, [C4, E4, G4] * 3), names(got) + " Hz")
+    got = steps(3600, 9)
+    check("UP-DOWN, 2 octaves: C E C5 E5 C5 E C ...", match(got, [C4, E4, C5, E5, C5, E4, C4, E4, C5]), names(got) + " Hz")
+    e, w = env_db(x, 2.0)
+    gaps = [e[int((700 + k * 125 + 100) / 2):int((700 + k * 125 + 122) / 2)].min() - e[int((700 + k * 125 + 10) / 2):int((700 + k * 125 + 70) / 2)].max() for k in range(1, 8)]
+    check("every step re-attacks (a gap before the next)", max(gaps) < -20, f"the gaps {max(gaps):.0f} dB or lower")
+    f = f0_acf(seg(x, 6600, 7200))
+    check("OFF: the highest held note", abs(1200 * np.log2(f / E4)) < 30, f"{f:.1f} Hz")
+
+
 if __name__ == "__main__":
     if sys.argv[1] == "core":
         core(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else None)
+    elif sys.argv[1] == "arp":
+        arp(sys.argv[2])
     elif sys.argv[1] == "options":
         options(sys.argv[2])
     elif sys.argv[1] == "pluck":
