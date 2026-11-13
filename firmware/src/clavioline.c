@@ -706,6 +706,8 @@ static void app_main(void)
         set.knee = KNEE_FAST;
     }
     apply_preset(P_CLAVIOLINE);                 /* every power-on starts on CLAVIOLINE TONE (user slots are kept) */
+    set.decay = 0;                              /* ... with the pluck decay and the portamento off */
+    set.glide = 0;
     fm_compute(&fm_buf[0], set.tabs);           /* the formant filter before the sound starts */
     net_tabs = set.tabs & NET_TABS;
     a_tabs = set.tabs;

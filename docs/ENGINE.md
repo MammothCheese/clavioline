@@ -128,7 +128,7 @@ from the lowest note, 87 Hz, up), and C17 is left out while V is up (within 0.07
 
 Settings version 8: older settings keep the user slots, tuning and keyboard window; the pluck decay goes to OFF and
 the knee speed to FAST. Every power-on starts on the CLAVIOLINE TONE
-preset.
+preset, with the pluck decay and the portamento off.
 
 ## Tests
 
