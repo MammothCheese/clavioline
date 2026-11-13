@@ -506,19 +506,19 @@ static void draw_rail(void)                     /* the tablets, in two rows, on 
     static const char *const L2[8] = {"III", "II", "I", "+", "Ip", "IIp", "If", "IIf"};   /* in the black-key order */
     static const uint8_t B2[8] = {T_VIB3, T_VIB2, T_VIB1, T_AMP, T_SUB1P, T_SUB2P, T_SUB1F, T_SUB2F};
     uint32_t i, tabs = set.tabs;
-    cv_begin(240, 40, C_NAVY);
-    cv_rect(2, 1, 236, 39, C_PANEL);
+    cv_begin(240, 32, C_NAVY);                  /* the black-key tablets on top, the white-key ones below, as in STOPS */
+    cv_rect(2, 1, 236, 31, C_PANEL);
     cv_rect(2, 0, 236, 1, C_CHROME);
-    for (i = 0; i < 14u; i++)
-        cv_tablet(8 + (int32_t)i * 16, 4, 14, 28, i == 13u ? C_ORANGE : C_RED, (int32_t)(tabs >> i & 1u), L1[i], C_PANEL);
-    cv_blit(0, 40);
-    cv_begin(240, 32, C_NAVY);
-    cv_rect(2, 0, 236, 30, C_PANEL);
-    cv_rect(2, 30, 236, 1, C_CHROME);
     for (i = 0; i < 8u; i++)
-        cv_tablet((i < 4u ? 6 : 14) + (int32_t)i * 27, 1, 26, 22, i < 4u ? C_TEAL : C_VIOLET,
+        cv_tablet((i < 4u ? 6 : 14) + (int32_t)i * 27, 4, 26, 22, i < 4u ? C_TEAL : C_VIOLET,
                   (int32_t)(tabs >> B2[i] & 1u), L2[i], C_PANEL);
-    cv_blit(0, 80);
+    cv_blit(0, 40);
+    cv_begin(240, 40, C_NAVY);
+    cv_rect(2, 0, 236, 38, C_PANEL);
+    cv_rect(2, 38, 236, 1, C_CHROME);
+    for (i = 0; i < 14u; i++)
+        cv_tablet(8 + (int32_t)i * 16, 3, 14, 28, i == 13u ? C_ORANGE : C_RED, (int32_t)(tabs >> i & 1u), L1[i], C_PANEL);
+    cv_blit(0, 72);
 }
 
 static void draw_preset(void)                   /* the preset in a capsule */
