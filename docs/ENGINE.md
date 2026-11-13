@@ -126,8 +126,10 @@ from the lowest note, 87 Hz, up), and C17 is left out while V is up (within 0.07
 | ARPEGGIATOR | **OFF** (default), UP, DOWN, UP-DOWN, RANDOM | The held notes (keys, MIDI, the drone) in turn, low to high; the gate open for 60 % of each step, so every note re-attacks through the control valve (P plucks each one). Runs in the main loop on the millisecond clock |
 | ARP TEMPO | 40–240 BPM in steps of 2, **120** | Sixteenth notes |
 | ARP RANGE | **1**, 2, 3 octaves | The held notes repeated an octave and two octaves up |
+| KNEE SPEED | FINE, GENTLE, **NORMAL**, FAST, VERY FAST | Lever steps (of 64) per PRESETS click, turning slowly / medium (<70 ms between clicks) / fast (<30 ms): 1/1/1, 1/1/2, 1/2/4, 2/4/8, 3/6/12 |
+| PORTAMENTO | **OFF**, 30, 60, 120, 250, 500 ms | The oscillator's pitch follows the note with that time constant (an RC-like approach in frequency, updated every 5.8 ms block, before the vibrato). After the idle rest a note starts at its own pitch |
 
-Settings version 6: version 3–5 settings load with everything kept. Every power-on starts on the CLAVIOLINE TONE
+Settings version 7: version 3–6 settings load with everything kept. Every power-on starts on the CLAVIOLINE TONE
 preset.
 
 ## Tests
@@ -153,6 +155,8 @@ and compares the FM-1's formant filter with the model:
 | STOPS mode note buttons | SEL plays D4 (293.7 Hz) |
 | Sub I f | the octave below at +3.1 dB re the fundamental |
 | Pluck decay 1.2 s (P notes, all notes); off | 36.9 dB down from 0.2 s to 1.3 s; off 0.0 dB |
+| Portamento off; 120 ms | C5 at once; 382 Hz 40–90 ms after a C4→C5 change, C5 by 0.55 s |
+| Knee speed: 10 PRESETS clicks | 25.1 dB down on VERY FAST, 4.1 dB on FINE |
 | Arpeggiator UP and UP-DOWN over 2 octaves; off | each step on the right note (C E G…; C E C5 E5 C5 E C…), a gap of 63 dB or more before each; off plays the highest note |
 | The FM-1's formant filter against the model | within 0.60 dB (48 combinations) |
 

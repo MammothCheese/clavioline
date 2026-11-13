@@ -197,9 +197,27 @@ def arp(path):
     check("OFF: the highest held note", abs(1200 * np.log2(f / E4)) < 30, f"{f:.1f} Hz")
 
 
+def glide(path):
+    """portamento and the knee lever speed (tests/scripts/glide.txt)"""
+    x = load(path)
+    C4, C5 = 261.63, 523.25
+    f = f0_acf(seg(x, 720, 780))
+    check("portamento off: the new note at once", abs(1200 * np.log2(f / C5)) < 30, f"{f:.1f} Hz 20..80 ms after")
+    f1 = f0_acf(seg(x, 2240, 2290))
+    f2 = f0_acf(seg(x, 2750, 2850))
+    check("portamento 120 ms: on the way, then there", C4 * 1.15 < f1 < C5 * 0.9 and abs(1200 * np.log2(f2 / C5)) < 30,
+          f"{f1:.1f} Hz 40..90 ms after, {f2:.1f} Hz at 0.55 s")
+    fast = rms_db(seg(x, 3300, 3450)) - rms_db(seg(x, 3700, 3850))
+    fine = rms_db(seg(x, 4800, 4950)) - rms_db(seg(x, 5200, 5350))
+    check("knee speed: 10 detents move the lever further on VERY FAST than on FINE", fast > fine + 6,
+          f"{fast:.1f} dB down against {fine:.1f} dB")
+
+
 if __name__ == "__main__":
     if sys.argv[1] == "core":
         core(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else None)
+    elif sys.argv[1] == "glide":
+        glide(sys.argv[2])
     elif sys.argv[1] == "arp":
         arp(sys.argv[2])
     elif sys.argv[1] == "options":

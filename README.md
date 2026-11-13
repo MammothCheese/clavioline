@@ -46,7 +46,7 @@ silence starts the same way.
 | SELECT | Presets (see below) | The voicing card |
 | GLO | STOPS mode: all the tablets, including vibrato, P and the sub-octaves | The tablet rail |
 | SAVE | Store the current tablets and coupler in the user slot shown | |
-| SEQ | Non-historical options: the pluck decay and an arpeggiator (see below) | |
+| SEQ | Non-historical options: pluck decay, arpeggiator, knee lever speed, portamento (see below) | |
 | KNOB 1 | Fine tuning, ±50 cents | The tuning control |
 
 Plucked sounds work as on the original. Choose Banjo, Mandolin or Harpsichord (they have **P** down), then flick the
@@ -90,6 +90,11 @@ The bottom line shows the audio engine's CPU load.
   join in.
 - **ARP TEMPO**: 40 to 240 BPM (sixteenth notes), 120 to start with.
 - **ARP RANGE**: the held notes over 1, 2 or 3 octaves.
+- **KNEE SPEED** (FINE, GENTLE, NORMAL, FAST, VERY FAST; NORMAL to start with): how far each click of the PRESETS
+  knob moves the knee lever. FINE is one step per click however fast you turn, for slow, even swells; the faster
+  settings cover the lever's range in fewer turns.
+- **PORTAMENTO** (off to start with; 30, 60, 120, 250 or 500 ms): each new note glides from the last one's pitch.
+  After a silence a note starts at its own pitch.
 
 ### Presets
 

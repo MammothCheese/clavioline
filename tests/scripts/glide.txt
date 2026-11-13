@@ -1,0 +1,35 @@
+# Portamento and knee lever speed (tests/check_engine.py glide): TRUMPET, vibrato off
+20 enc 0 22
+50 btn 7
+60 keys 0x8
+70 keys 0
+100 btn 7
+# no portamento: C4, then C5 legato: C5 at once
+300 keys 0x80
+700 keys 0x80080
+1100 keys 0
+# SEQ: PORTAMENTO 120 MS; KNEE SPEED VERY FAST; a screen; back
+1300 btn 11
+1350 enc 0 6
+1400 enc 2 3
+1450 enc 0 -1
+1500 enc 2 2
+1550 shot
+1600 btn 11
+# C4, then C5 legato: it glides
+1800 keys 0x80
+2200 keys 0x80080
+2900 keys 0
+# the knee lever, VERY FAST: 10 detents back
+3100 keys 0x80
+3500 enc 6 -10
+3900 keys 0
+# SEQ: KNEE SPEED FINE; back; the lever up 30 detents (back to where it was); 10 detents back
+4000 btn 11
+4100 enc 2 -4
+4200 btn 11
+4400 enc 6 30
+4600 keys 0x80
+5000 enc 6 -10
+5400 keys 0
+5600 end
