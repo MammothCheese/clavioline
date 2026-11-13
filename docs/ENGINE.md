@@ -22,11 +22,12 @@ After 100 ms of silence the engine rests and does no work until a key goes down.
 | Oscillator | Band-limited wavetables, one per octave (harmonics up to 10.5 kHz), of the multivibrator's wave as the control valve passes it on: a sharp drop, an exponential recovery, uneven clipping | "trapezoidal in form" (documented); the shape is an **estimate** (`tools/clav_wave.py`) |
 | Sub I / II | Square wavetables at a half and a quarter of the oscillator's phase (the dividers flip on its periods); **p** and **f** levels | Concert drawing (documented); levels **estimated** |
 | Vibrato | Sine LFO at 4.5 / 5.5 / 6.5 Hz; pitch ±8.4 cents, ±32 with AMP; ±3 % amplitude | Rates documented, depth ratio derived; depth and AM **estimated** |
-| Control valve (attack) | The printed cathode network, discretised exactly over 8 output samples; tablet P selects the short time constant; gain through a remote-cut-off curve. Notes sustain while held | Time constants derived (19.2 ms; 1.54 ms with P); curve **estimated** |
+| Control valve (attack) | The printed cathode network, discretised exactly over 8 output samples; tablet P selects the short time constant; gain through a remote-cut-off curve. On release the valve's own cathode current cuts it off in a few ms | Time constants derived (19.2 ms; 1.54 ms with P); curve and release **estimated** |
+| Control valve (screen grid) | While the valve is shut, its screen capacitor (C4, fed through R4) charges fully; when the valve opens, the screen current drains it, so the valve starts with extra gain that sags to its steady level. Opening fast (P) gives a sharp peak, about 13 dB over the steady level; the slow normal opening a swell of about 4 dB. Notes then sustain while held | R4, C4 on Fig. 2 (values not printed); the dynamics **fitted to a recording** (below) |
 | Coupling | C5 (0.02 µF) as a first-order high-pass at 71 Hz | Concert drawing |
 | Formant filter | Five biquads, decoded for the tablets down (below) | Fig. 4 model |
 | Knee lever | A gain per lever step: the model's level change with R32, smoothed over ~6 ms | Position documented; taper **estimated** |
-| Valve amplifier | y + 0.59 y², a soft ceiling: the 2nd harmonic well up at full swell, less when softer | "mostly 2nd harmonic", "a large amount of distortion is deliberately obtained" (documented); amount **estimated** |
+| Valve amplifier | At a third of the level (headroom for the peaks): y + 1.59 y², a soft ceiling; 2.5× after the speaker. The 2nd harmonic is well up at full swell, less when softer | "mostly 2nd harmonic", "a large amount of distortion is deliberately obtained" (documented); amount **estimated** |
 | Speaker and cabinet | Three biquads: high-pass 100 Hz Q 1.1, +4 dB at 2.2 kHz Q 1, low-pass 5.5 kHz | A 10-inch speaker "specially produced to add its measure" (documented); response **estimated** |
 | DC blocker | ~14 Hz | |
 
@@ -54,6 +55,26 @@ typical combination. Four sections per combination were not enough (90 % within 
 
 [net-responses.png](net-responses.png) shows the model's responses for twelve tablet sets;
 `python3 tools/plot_net.py docs/net-responses.png` redraws it.
+
+## Tablet P, and the recording it was fitted to
+
+The 1952 article says P shortens the attack "so that a definite transient appears at the commencement of each note".
+A recorded demonstration of a Clavioline (the P section at about 1:59) shows what that transient is. Averaged over 14
+notes, each note:
+- rises in 4–8 ms;
+- falls 4.4 / 7.6 / 10.0 dB in the first 10 / 20 / 40 ms after its peak (consistent from note to note, within about
+  3 dB);
+- after that varies widely (the player's releases and knee lever), settling 10–17 dB under the peak;
+- re-peaks on every note of a run with gaps of about 50 ms.
+
+A sustained note in the same recording (about 1:44) rises in about 18 ms and swells about 7 dB before settling.
+
+The firmware explains both with one mechanism from the drawing: the control valve's screen grid. Its capacitor is full
+while the valve is shut and is drained once the valve conducts, so the valve's gain starts high and sags. A fast
+opening (P) turns that into a sharp peak; a slow one into a gentle swell. Its two time constants and weight were fitted
+to the recording's runs of P notes; the release had to be fast (the valve's own cathode current) for every note of a
+run to re-peak. `tests/scripts/pluck.txt` plays such a run and `tests/check_engine.py pluck` checks it against the
+recording's figures.
 
 ## Parameters
 
@@ -88,7 +109,9 @@ from the lowest note, 87 Hz, up), and C17 is left out while V is up (within 0.07
 | Key contact delays | oscillator 3 ms before the gate; gate 4 ms before the oscillator stops | **Estimate** |
 | Sub I / II levels | f = the main tone's level, p = 10 dB softer | **Estimate** |
 | Vibrato | 4.5, 5.5, 6.5 Hz; ±8.4 / ±32 cents; ±3 % AM; the fastest of several wins | Rates printed; ratio derived; the rest **estimated** |
-| Amplifier | d = 0.59 | **Estimate** |
+| Screen-grid sag | drained in 10 ms at full conduction, recharged in 65 ms, weight 40 (peak 6.5× the steady gain) | **Fitted** to runs of P notes in a Clavioline recording |
+| Release | the valve cut off in ~3–6 ms by its cathode current (12 kΩ equivalent) | **Estimate**, so that repeated P notes re-peak as in the recording |
+| Amplifier | at a third of the level, d = 1.59, 2.5× after | **Estimate** |
 | Speaker | see the signal chain | **Estimate** |
 | Pitch | the FM-1's F3 key = F3 with the coupler at MED | **Estimate** |
 
@@ -114,11 +137,12 @@ and compares the FM-1's formant filter with the model:
 |---|---|
 | Pitch of C4 and C5, highest-note priority, return to the held note, coupler | within ±0.1 cents |
 | Legato note change | no new attack |
-| Attack to −40 / −20 / −3 dB | 12 / 28 / 62 ms; with P 2 / 4 / 6 ms |
+| Attack to −40 / −20 / −3 dB | 8 / 16 / 28 ms; with P 2 / 2 / 4 ms |
+| Start of a note over its steady level (first 40 ms) | +12.8 dB with P, +4.0 dB without |
 | With P, the note still sustains | +0.0 dB from 0.25 s to 0.5 s |
-| Without P, a gradual start | first 40 ms at 0.32 of the steady peak |
+| Runs of P notes against the recording | −8.3 / −10.2 dB at 20 / 40 ms after each peak (recording −7.6 / −10.0); then steady within 1.3 dB; every note re-peaks |
 | Knee lever from step 48 to 8 | −38.7 dB |
-| Aliasing on the top note (3136 Hz) | −45.3 dB below the harmonics |
+| Aliasing on the top note (3136 Hz) | −38.1 dB below the harmonics (the harder-driven amplifier adds harmonics) |
 | Vibrato I / II / III | 4.49 / 5.52 / 6.49 Hz; deep / shallow 3.65 |
 | STOPS mode note buttons | SEL plays D4 (293.7 Hz) |
 | Sub I f | the octave below at +3.1 dB re the fundamental |

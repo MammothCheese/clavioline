@@ -23,6 +23,8 @@ OUT = Path(__file__).resolve().parent.parent / "firmware" / "src" / "clav_tables
 # Nodes: S (C1), Q (C2), K (C3, the cathode). K-R7-P-R4-Q-R3-S. Tablet P (S2) joins S and P.
 # A key's second contact grounds S through R1. R8 feeds K from HT.
 R1, R3, R4, R7, R8 = 1e3, 50e3, 2.5e3, 5e3, 500e3       # PRINTED
+R_CATH = 12e3      # ESTIMATE: on release the valve's own cathode current charges C3 and cuts it off in a few ms
+                   # (R8 alone would take 0.2 s); fitted so repeated P notes re-spike as in a recording
 C1, C2, C3 = 0.1e-6, 0.1e-6, 0.25e-6                    # PRINTED
 # Normalised: 1 = the quiescent (cut-off) cathode voltage, 0 = fully conducting. The printed bias resistors
 # (R8, preset R2, unknown HT) do not give consistent absolute levels (docs/HISTORY.md), so only the
@@ -49,8 +51,8 @@ def ladder(p_on: bool, key: bool):
     if key:
         G[S, S] += 1.0 / R1        # to ground (target 0)
     else:
-        G[K, K] += 1.0 / R8        # to "1" through R8
-        src[K] += 1.0 / R8
+        G[K, K] += 1.0 / R8 + 1.0 / R_CATH     # to "1": through R8, and the cathode current
+        src[K] += 1.0 / R8 + 1.0 / R_CATH
     Cm = np.diag([C1, C2, C3])
     A = -np.linalg.solve(Cm, G)
     b = np.linalg.solve(Cm, src)

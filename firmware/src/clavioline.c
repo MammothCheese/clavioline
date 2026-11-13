@@ -51,8 +51,19 @@ static void app_idle(void);
 #define VIB_BIG_Q16 1211                        /* vibrato, AMP on: +-32 cents (ln2/1200 * 32 * 65536). ESTIMATE */
 #define VIB_SMALL_Q16 318                       /* AMP off: 3.8x smaller (DERIVED ratio, Fig. 3 R23/R24) */
 #define VIB_AM_Q15 983                          /* "a small amount of amplitude modulation": +-3 %. ESTIMATE */
-#define VALVE_D_Q15 19300                       /* valve amplifier: y + 0.59 y^2, the 2nd harmonic ~-18 dB at full lever.
+#define VALVE_D_Q15 52000                       /* valve amplifier: y + 1.59 y^2 (at a third of the level): the 2nd harmonic ~-18 dB at full lever.
                                                  * ESTIMATE ("a large amount of distortion is deliberately obtained") */
+/* The control valve's screen grid (Fig. 2: R4, C4, values not printed). While the valve is shut, C4 charges to the
+ * full supply; when the valve opens, its screen current drains it, so the valve starts with extra gain that sags
+ * to its steady value. Opening fast (tablet P) gives a sharp percussive peak; the slow normal opening only a swell.
+ * Fitted to runs of P notes in a Clavioline recording (each note peaks about 16 dB over its steady level, -4.5 /
+ * -7.5 / -9 dB after 10 / 20 / 40 ms, and re-peaks on the next note): ESTIMATES, Q30 per 22.05 kHz step. */
+#define SAG_A1 4869580                          /* drained in 10 ms at full conduction */
+#define SAG_R 749154                            /* recharged through R4 in 65 ms */
+#define SAG_K1 40                               /* its weight in the gain */
+#define SAG_INVN 10348                          /* 1 / the gain at steady conduction, Q16: steady notes keep their level */
+#define AMP_IN_Q15 10923                        /* into the amplifier at a third (-9.5 dB): headroom for the peaks ... */
+#define AMP_OUT_Q8 640                          /* ... and 2.5x after the speaker */
 static const uint32_t VIB_INC[3] = {112195064u, 137127301u, 162059537u};   /* 4.5, 5.5, 6.5 Hz per 256-frame block, 2^32 */
 
 static volatile uint32_t a_inc;                 /* main -> ISR: phase step of the sounding note (44.1 kHz) */
@@ -79,9 +90,10 @@ static struct {
     uint32_t ph, wraps, held, pend_on, pend_off, lfo;
     int32_t run, stopping, gate, fade, dcx, dcy, xfade, xdir, g, gstep, yh[4], hp, hpx, lev;
     uint32_t quiet, idle, pluck, env;           /* env: the pluck decay, Q30 */
+    int32_t s1;                                 /* the screen grid's charge, Q30 (1 = full) */
     int32_t x[3];                               /* V2 cathode network, Q30: 1 = cut off, 0 = conducting */
     int32_t sx1[3], sx2[3], sy1[3], sy2[3];     /* the speaker's biquads */
-} au = {.x = {1 << 30, 1 << 30, 1 << 30}, .xfade = 32767, .env = 1u << 30};
+} au = {.x = {1 << 30, 1 << 30, 1 << 30}, .xfade = 32767, .env = 1u << 30, .s1 = 1 << 30};
 
 static int32_t sine(uint32_t ph)                /* a full cycle over 2^32 -> -32767..32767 (Dinghy's) */
 {
@@ -233,6 +245,13 @@ static void app_audio(int32_t *out, uint32_t n)
         }
         v = (v * am) >> 15;                     /* (vibrato's small AM is on the oscillator, V1) */
         v = (v * g) >> 15;                      /* the control valve: the attack (and the release) */
+        {                                       /* its screen grid: the charge stores drain while it conducts */
+            int64_t gd = (int64_t)g;            /* (Q15) */
+            int32_t mq;
+            au.s1 += (int32_t)((((int64_t)SAG_R * ((1 << 30) - au.s1)) >> 30) - ((((SAG_A1 * gd) >> 15) * au.s1) >> 30));
+            mq = (int32_t)(((((int64_t)1 << 30) + (int64_t)SAG_K1 * au.s1) >> 18) * SAG_INVN >> 16);
+            v = (int32_t)(((int64_t)v * mq) >> 12);   /* (gain in Q12: up to ~6.5 at the very start) */
+        }
         {                                       /* C5, the coupling capacitor: a first-order high-pass */
             int32_t hp = ((au.hp + v - au.hpx) * HP_A_Q13) >> 13;
             au.hpx = v;
@@ -256,7 +275,10 @@ static void app_audio(int32_t *out, uint32_t n)
             }
             yi = yi > 60000 ? 60000 : yi < -60000 ? -60000 : yi;
             yi = (yi * au.xfade) >> 15;
+            yi = (yi * AMP_IN_Q15) >> 15;
             yi = speaker(valve(yi));            /* the amplifier, then the loudspeaker */
+            yi = (yi * AMP_OUT_Q8) >> 8;
+            yi = yi > 32767 ? 32767 : yi < -32767 ? -32767 : yi;
             au.dcy += yi * 256 - au.dcx - (au.dcy >> 9);   /* DC blocker, ~14 Hz, Q8 */
             au.dcx = yi * 256;
             o = au.dcy >> 8;
@@ -275,6 +297,7 @@ static void app_audio(int32_t *out, uint32_t n)
         memset(au.sy1, 0, sizeof au.sy1); memset(au.sy2, 0, sizeof au.sy2);
         au.hp = au.hpx = au.dcx = au.dcy = au.g = au.gstep = 0;
         au.x[0] = au.x[1] = au.x[2] = 1 << 30;
+        au.s1 = 1 << 30;                        /* (at rest the screen capacitor is full again) */
         au.quiet = 0;
         au.idle = 1;
     }

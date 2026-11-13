@@ -73,8 +73,9 @@ The bottom line shows the audio engine's CPU load.
 
 - **1–9, O, A, B, V** switch the coils and capacitors of the tone-forming network. They combine as in the real circuit:
   each changes what the others do, rather than adding a fixed EQ curve.
-- **P** shortens the attack: notes start sharply instead of swelling in, which is how the original made plucked
-  and percussive sounds. It changes only the attack; the note still sustains while you hold the key.
+- **P** shortens the attack: the control valve opens at once, and each note starts with a sharp peak that falls
+  about 10 dB within 40 ms, then sustains while you hold the key. Without P, notes swell in gently. The peak's shape
+  was matched to a recording of a real Clavioline.
 - **Sub I / Sub II** add the octave and the two octaves below, softly (**p**) or loudly (**f**). They come from the Concert model.
 
 ### Options
@@ -100,7 +101,7 @@ A `*` after the name means you have changed something since choosing it.
 |---|---|
 | Valve multivibrator, retuned by a precision resistor chain; highest key wins | A phase-accurate oscillator with highest-note priority, legato and restart-from-rest |
 | Output "trapezoidal in form", from a valve multivibrator | The multivibrator's uneven pulse (one sharp edge, one recovering), clipped by the control valve; band-limited wavetables, so it never aliases |
-| The control valve (6BA6) opens after a delay set by its cathode circuit; tablet P shortens it | The printed cathode circuit simulated exactly: ~19 ms normally, ~1.5 ms with P, with the valve's gradual turn-on |
+| The control valve (6BA6) opens after a delay set by its cathode circuit; tablet P shortens it, so "a definite transient appears" | The printed cathode circuit simulated exactly (~19 ms, ~1.5 ms with P), plus the valve's screen-grid capacitor, whose sag gives P notes their percussive peak; fitted to a recording |
 | A network of five coils and 13 capacitor and resistor groups, switched by tablets 1–9, O, A, B, V | **A model of the whole network**, solved on a computer for all 8192 tablet combinations and stored as five resonant filters each. The tablets interact as in the circuit, because every combination comes from the full model |
 | The knee lever, a variable resistor across the network's input | The swell: the level change the model gives for each lever position |
 | Vibrato at 4.5 / 5.5 / 6.5 Hz, two depths | The same rates; depths in the ratio the circuit gives (3.8 : 1) |

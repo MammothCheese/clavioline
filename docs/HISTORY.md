@@ -169,8 +169,10 @@ still did not sound convincing. An audit against the article found the reasons e
   adds its own; the engine had almost none (2nd harmonic 40 dB down) and no speaker at all.
 - **The resonances:** with coil losses estimated at Q ~ 6, several tablets (A, 5, 6, 7, 9) changed little. Q ~ 15,
   usual for iron-core audio coils, makes them distinct.
-- **Tablet P:** the article documents it as a shorter attack and nothing more. An earlier "ping" and an automatic
-  decay were removed.
+- **Tablet P:** the article documents it as a shorter attack that makes "a definite transient". An earlier
+  invented "ping" and an automatic decay were removed. A recording of a real Clavioline then showed the transient
+  itself: each P note peaks and falls about 10 dB within 40 ms, then holds. The control valve's screen-grid capacitor
+  (C4 on Fig. 2) accounts for it, and its dynamics are fitted to that recording ([ENGINE.md](ENGINE.md)).
 
 The network is now solved on a computer for all 8192 tablet combinations, from the same model, and each response is
 stored as five resonant filters. The FM-1 runs those instead of the circuit: the tablets still interact exactly as the

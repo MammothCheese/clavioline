@@ -11,10 +11,12 @@ build/host/clavioline build/host/core tests/scripts/clav.txt >/dev/null
 build/host/clavioline build/host/alias tests/scripts/clav_alias.txt >/dev/null
 build/host/clavioline build/host/stage4 tests/scripts/stage4.txt >/dev/null
 build/host/clavioline build/host/options tests/scripts/options.txt >/dev/null
+build/host/clavioline build/host/pluck tests/scripts/pluck.txt >/dev/null
 fail=0
 ${PYTHON:-python3} tests/check_engine.py core build/host/core.wav build/host/alias.wav || fail=1
 ${PYTHON:-python3} tests/check_engine.py stage4 build/host/stage4.wav || fail=1
 ${PYTHON:-python3} tests/check_engine.py options build/host/options.wav || fail=1
+${PYTHON:-python3} tests/check_engine.py pluck build/host/pluck.wav || fail=1
 FT=build/host/formant_test; [ -f "$FT.exe" ] && FT="$FT.exe"
 ${PYTHON:-python3} tests/formant_check.py "$FT" || fail=1
 exit $fail

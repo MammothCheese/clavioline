@@ -80,8 +80,11 @@ def core(path, alias_path=None):
     pk = np.abs(seg(x, 2800, 2840)).max() / np.abs(seg(x, 3200, 3350)).max()
     d = rms_db(seg(x, 3050, 3150)) - rms_db(seg(x, 3300, 3390))
     check("tablet P: the note still sustains", abs(d) < 2, f"{d:+.1f} dB from 0.25 s to 0.5 s")
-    pk = np.abs(seg(x, 200, 240)).max() / np.abs(seg(x, 600, 750)).max()
-    check("without P: a gradual start", pk < 1.0, f"first 40 ms peak {pk:.2f}x the steady peak")
+    pk_n = np.abs(seg(x, 200, 240)).max() / np.abs(seg(x, 600, 750)).max()
+    pk_p = np.abs(seg(x, 2800, 2840)).max() / np.abs(seg(x, 3200, 3350)).max()
+    d = 20 * np.log10(pk_p / pk_n)
+    check("P peaks well over a note without P", d > 6,
+          f"first 40 ms over the steady level: {20 * np.log10(pk_p):+.1f} dB with P, {20 * np.log10(pk_n):+.1f} dB without")
     d = rms_db(seg(x, 4100, 4250)) - rms_db(seg(x, 4500, 4650))
     check("knee lever 48 -> 8 steps", d > 15, f"{d:.1f} dB down")
     tail = seg(x, 2250, 2350)
@@ -149,11 +152,33 @@ def options(path):
         check(name, ok_, f"{d:.1f} dB down between 0.2 s and 1.3 s")
 
 
+def pluck(path):
+    """runs of P notes (tests/scripts/pluck.txt), against a Clavioline recording's P demonstration: there each note
+    falls 7.6 dB by 20 ms and 10.0 dB by 40 ms after its peak (the mean of 14 notes)"""
+    x = load(path)
+    e, w = env_db(x, 2.0)
+    curves = []
+    for k in range(16):
+        i0 = int((0.4 + k * 0.3) * 1000 / 2.0)
+        sg = e[i0:i0 + 125]
+        ip = int(np.argmax(sg[:15]))
+        curves.append(sg[ip:ip + 100] - sg[ip])
+    c = np.mean(curves, axis=0)
+    d20, d40, late = c[10], c[20], c[40:95]
+    check("P notes: the fall after the peak", -11 < d20 < -5 and -13 < d40 < -7,
+          f"{d20:+.1f} dB at 20 ms, {d40:+.1f} dB at 40 ms (recording: -7.6, -10.0)")
+    check("P notes: then they sustain", late.max() - late.min() < 4, f"80..190 ms within {late.max() - late.min():.1f} dB")
+    first = [cv[20] for cv in curves]
+    check("P notes: every note in a run re-peaks", max(first) < -7, f"40 ms after each peak: {min(first):.1f} .. {max(first):.1f} dB")
+
+
 if __name__ == "__main__":
     if sys.argv[1] == "core":
         core(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else None)
     elif sys.argv[1] == "options":
         options(sys.argv[2])
+    elif sys.argv[1] == "pluck":
+        pluck(sys.argv[2])
     else:
         stage4(sys.argv[2])
     print("ALL PASS" if ok else "SOME FAILED")
