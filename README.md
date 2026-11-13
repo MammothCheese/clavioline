@@ -13,52 +13,13 @@ else is about shaping that tone:
 - a three-speed **vibrato**;
 - on the **Concert** model, **sub-octaves** that add one or two octaves below the note.
 
-### The tablets
-
-Most tablets switch capacitors and resistors into a single network of coils that sits between the oscillator and the
-amplifier. Because it is one shared circuit, the tablets do not simply add up: each changes what the others do. That
-is why a short list of switches could imitate violins, oboes, trumpets and organs.
-
-| Tablet | What it does in the circuit | What you hear |
-|---|---|---|
-| **1, 2** | Capacitors across the coil chain; 2 tunes exactly an octave above 1 | A strong resonance (formant), low or higher |
-| **3, 4** | Capacitors with resistors; 9.5 semitones apart | Softer, broader formants |
-| **5, 6** | Capacitors on a second winding of the same coil | Colour that appears only alongside other tablets |
-| **7, 8, 9** | Capacitors that bridge round the coils, 9 the largest | More of the upper harmonics get through: brighter, more cutting |
-| **O** | A resistor across the last coil | Damps the resonances: smoother, rounder |
-| **A** | A capacitor from the middle of the coil chain to ground | Cuts upper harmonics part-way along |
-| **B** | Grounds the middle of the coil chain | Only the thin bypass path is left: a thin, reedy tone (A no longer has any effect) |
-| **V** | A capacitor at the network's input | Darkens the upper harmonics: a gentler alternative to O |
-| **P** | Shortens the control valve's delay | Each note starts with a sharp, percussive peak instead of swelling in |
-| **Vibrato I, II, III** | The vibrato oscillator's speed: 4.5, 5.5 or 6.5 Hz | |
-| **Amplitude** | Vibrato depth | Shallow or deep vibrato |
-| **Sub I, Sub II** (Concert) | Divider valves, each soft (**p**) or loud (**f**) | The octave and the two octaves below |
-
 ### How faithful it is
 
-The firmware is built from the original circuit diagrams, mainly a 1952 engineering article that printed them in full.
-The diagrams were traced wire by wire into a computer model of the circuit. That model was then solved on a PC for all
-8,192 tablet combinations, and the FM-1 plays back the result: compact filters that reproduce what the circuit does
-for each combination. The FM-1's small processor could not run the full circuit live, but this way the tablets still
-interact exactly as the model says.
+The firmware is built from the original circuit diagrams. The diagrams were traced wire by wire into a computer model of the circuit. That model was then solved on a PC for all 8,192 tablet combinations, and the FM-1 plays back the result: compact filters that reproduce what the circuit does for each combination. The FM-1's small processor could not run the full circuit live, but this way the tablets still interact exactly as the model says.
 
 Some parts of the original are not in any surviving document: the coils' values, the oscillator's exact wave shape,
 the amount of amplifier distortion and the speaker's sound. Those are estimates, refined by comparing the firmware
-against a recording of a real Clavioline. Every estimate is listed in [docs/ENGINE.md](docs/ENGINE.md).
-
-## Installing
-
-1. Get `clavioline.fwsc` from this repository's **Releases** page, or from the latest run on the **Actions** tab.
-2. Install it with the [FM-1 Firmware Hub](https://thefirmwarehub.com) in Chrome or Edge, or over USB:
-   ```sh
-   python3 tools/fm1_install.py clavioline.fwsc
-   ```
-3. At power-on the screen shows `BUILD` and a seven-character code: the commit the firmware was built from. Compare it
-   with the latest commit on GitHub to be sure you have the newest build.
-4. To go back to the official firmware or another one, use the Firmware Hub. It always reaches this firmware over USB.
-5. If anything goes wrong, hold **OCT−** while switching on. That starts the USB rescue: no sound, only the updater.
-
-Installing firmware is at your own risk; keep a backup of your FM-1.
+against a recording of a real Clavioline.
 
 ## Playing
 
@@ -83,6 +44,27 @@ silence starts the same way.
 
 Plucked sounds work as on the original. Choose Banjo, Mandolin or Harpsichord (they have **P** down), then flick the
 knee lever up and back down for each note. Bowed swells are a slow push and release.
+
+### The tablets
+
+Most tablets switch capacitors and resistors into a single network of coils that sits between the oscillator and the
+amplifier. Because it is one shared circuit, the tablets do not simply add up: each changes what the others do. That
+is why a short list of switches could imitate violins, oboes, trumpets and organs.
+
+| Tablet | What it does in the circuit | What you hear |
+|---|---|---|
+| **1, 2** | Capacitors across the coil chain; 2 tunes exactly an octave above 1 | A strong resonance (formant), low or higher |
+| **3, 4** | Capacitors with resistors; 9.5 semitones apart | Softer, broader formants |
+| **5, 6** | Capacitors on a second winding of the same coil | Colour that appears only alongside other tablets |
+| **7, 8, 9** | Capacitors that bridge round the coils, 9 the largest | More of the upper harmonics get through: brighter, more cutting |
+| **O** | A resistor across the last coil | Damps the resonances: smoother, rounder |
+| **A** | A capacitor from the middle of the coil chain to ground | Cuts upper harmonics part-way along |
+| **B** | Grounds the middle of the coil chain | Only the thin bypass path is left: a thin, reedy tone (A no longer has any effect) |
+| **V** | A capacitor at the network's input | Darkens the upper harmonics: a gentler alternative to O |
+| **P** | Shortens the control valve's delay | Each note starts with a sharp, percussive peak instead of swelling in |
+| **Vibrato I, II, III** | The vibrato oscillator's speed: 4.5, 5.5 or 6.5 Hz | |
+| **Amplitude** | Vibrato depth | Shallow or deep vibrato |
+| **Sub I, Sub II** (Concert) | Divider valves, each soft (**p**) or loud (**f**) | The octave and the two octaves below |
 
 ### STOPS mode: the tablets
 
@@ -156,6 +138,20 @@ The project worked like restoring an instrument that no longer exists, from its 
    what worked under the fingers.
 
 The full story is in [docs/HISTORY.md](docs/HISTORY.md).
+
+## Installing
+
+1. Get `clavioline.fwsc` from this repository's **Releases** page, or from the latest run on the **Actions** tab.
+2. Install it with the [FM-1 Firmware Hub](https://thefirmwarehub.com) in Chrome or Edge, or over USB:
+   ```sh
+   python3 tools/fm1_install.py clavioline.fwsc
+   ```
+3. At power-on the screen shows `BUILD` and a seven-character code: the commit the firmware was built from. Compare it
+   with the latest commit on GitHub to be sure you have the newest build.
+4. To go back to the official firmware or another one, use the Firmware Hub. It always reaches this firmware over USB.
+5. If anything goes wrong, hold **OCT−** while switching on. That starts the USB rescue: no sound, only the updater.
+
+Installing firmware is at your own risk; keep a backup of your FM-1.
 
 ## Documentation
 
