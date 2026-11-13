@@ -95,7 +95,7 @@ To hear the tablets while you set them:
   knob moves the knee lever. FINE is one step per click however fast you turn, for slow, even swells; the faster
   settings cover the lever's range in fewer turns.
 - **PORTAMENTO** (off at every power-on; 15, 30, 60, 120, 250 or 500 ms): each new note glides from the last one's pitch.
-  After a silence a note starts at its own pitch.
+  After a silence a note starts at its own pitch. This simulates sliding across the keyboard.
 
 ### Presets
 
@@ -126,10 +126,8 @@ The full story is in [docs/HISTORY.md](docs/HISTORY.md).
 
 ## Installing
 
-1. Get `clavioline.fwsc` from this repository's **Releases** page, or from the latest run on the **Actions** tab.
-2. Install it with the [FM-1 Firmware Hub](https://thefirmwarehub.com).
-3. To go back to the official firmware or another one, use the Firmware Hub. It always reaches this firmware over USB.
-4. If anything goes wrong, hold **OCT−** while switching on. That starts the USB rescue: no sound, only the updater.
+1. Get `clavioline.fwsc` from this repository's **Releases** page, or from the latest run on the **Actions** tab, or install it with the [FM-1 Firmware Hub](https://thefirmwarehub.com).
+2. If anything goes wrong, hold **OCT−** while switching on. That starts the USB rescue: no sound, only the updater.
 
 Installing firmware is at your own risk; keep a backup of your FM-1.
 
