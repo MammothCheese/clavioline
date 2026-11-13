@@ -76,7 +76,7 @@ To hear the tablets while you set them:
                 vib  vib  vib   vibrato                     Sub   Sub   Sub   Sub
                 III  II   I     depth (+)                   I p   II p  I f   II f
  white keys: F3  G3  A3  B3  C4  D4  E4  F4  G4  A4  B4  C5  D5  E5  F5
-              1   2   3   4   5   6   7   8   9   O   A   B   V   P   (all off)
+              1   2   3   4   5   6   7   8   9   O   A   B   V   P
 ```
 
 ### Options

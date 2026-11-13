@@ -16,7 +16,7 @@
  *   SEQ         OPTIONS: pluck decay, knee lever speed, portamento (none of them on the original)
  *   KNOB 1      fine tune +-50 cents (VR6)
  * STOPS mode (GLO or HOME back; nothing is lost)
- *   white keys  F3..E5: tablets 1 2 3 4 5 6 7 8 9 O A B V P;  F5: all tone tablets off
+ *   white keys  F3..E5: tablets 1 2 3 4 5 6 7 8 9 O A B V P;  F5, G5: nothing
  *   black keys  F#3 G#3 A#3: vibrato III II I;  C#4: AMP;  A#4 C#5 D#5 F#5: Sub I p, Sub II p, Sub I f, Sub II f
  *   FX SEL ENV LFO EDIT   play C4 D4 E4 F4 G4 while held, to try the tablets
  *   PLAY        holds the last note as a drone while you change tablets; MIDI notes play as usual
@@ -510,7 +510,7 @@ static void draw_rail(void)                     /* the tablets, in two rows, on 
     cv_rect(2, 1, 236, 31, C_PANEL);
     cv_rect(2, 0, 236, 1, C_CHROME);
     for (i = 0; i < 8u; i++)
-        cv_tablet((i < 4u ? 6 : 14) + (int32_t)i * 27, 4, 26, 22, i < 4u ? C_TEAL : C_VIOLET,
+        cv_tablet((i < 4u ? 7 : 15) + (int32_t)i * 27, 4, 24, 22, i < 4u ? C_TEAL : C_VIOLET,
                   (int32_t)(tabs >> B2[i] & 1u), L2[i], C_PANEL);
     cv_blit(0, 40);
     cv_begin(240, 40, C_NAVY);
@@ -671,9 +671,9 @@ static void app_idle(void)
 }
 
 /* ---- STOPS mode: the keys as tablets ----------------------------------------------------------------- */
-static const int8_t KEY_TAB[27] = {             /* key (0 = F3) -> tablet, -1 none, -2 all tone tablets off */
+static const int8_t KEY_TAB[27] = {             /* key (0 = F3) -> tablet, -1 none */
     T_1, T_VIB3, T_2, T_VIB2, T_3, T_VIB1, T_4, T_5, T_AMP, T_6, -1, T_7, T_8, -1, T_9, -1, T_O,
-    T_SUB1P, T_A, T_B, T_SUB2P, T_V, T_SUB1F, T_P, -2, T_SUB2F, -1};
+    T_SUB1P, T_A, T_B, T_SUB2P, T_V, T_SUB1F, T_P, -1, T_SUB2F, -1};
 
 static const uint8_t TEST_BTN[5] = {BTN_FX, BTN_SEL, BTN_ENV, BTN_LFO, BTN_EDIT};   /* STOPS: notes to try */
 static const uint8_t TEST_NOTE[5] = {60, 62, 64, 65, 67};                            /* C4 D4 E4 F4 G4 */
@@ -732,7 +732,6 @@ static void app_main(void)
                 if (down >> k & 1u) {
                     int32_t t = KEY_TAB[k];
                     if (t >= 0) set.tabs ^= TB(t);
-                    else if (t == -2) set.tabs &= ~NET_TABS & ~TB(T_P);
                     if (t != -1) { edited = 1; dirty = 1; t_change = fm1_ms; }
                 }
                 continue;
