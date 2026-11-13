@@ -609,6 +609,44 @@ static void draw_coupler(void)                  /* three lamps */
     cv_blit(0, 200);
 }
 
+static int32_t cv_runs(int32_t x, int32_t y, const char *const *t, const uint16_t *c, uint32_t n)
+{                                               /* a line of text in coloured runs, spaces narrowed to 5 px */
+    uint32_t i;
+    for (i = 0; i < n; i++) {
+        const char *q = t[i];
+        char ch[2] = {0, 0};
+        for (; *q; q++) {
+            if (*q == ' ') { x += 5; continue; }
+            ch[0] = *q;
+            x = cv_text(x, y, &FONT_S, ch, c[i]);
+        }
+    }
+    return x;
+}
+
+static void draw_guide(void)                    /* STOPS: what the tablets do, coloured like their caps */
+{
+    static const char *const L1[] = {"VIBRATO ", "III-I", " SPEED  ", "+", " DEPTH"};
+    static const char *const L2[] = {"SUB-OCT ", "Ip IIp", "   SOFT"};
+    static const char *const L3[] = {"If IIf", "   LOUD"};
+    static const char *const L4[] = {"1-9", " RESONANCE ", "O", " SMOOTH ", "A", " VOCAL"};
+    static const char *const L5[] = {"B", " REEDY ", "V", " VEILED ", "P", " PLUCK"};
+    static const uint16_t C1[] = {C_TEAL, C_TEAL, C_IVORY, C_TEAL, C_IVORY};
+    static const uint16_t C2[] = {C_VIOLET, C_VIOLET, C_IVORY};
+    static const uint16_t C3[] = {C_VIOLET, C_IVORY};
+    static const uint16_t C4[] = {C_RED, C_IVORY, C_RED, C_IVORY, C_RED, C_IVORY};
+    static const uint16_t C5[] = {C_RED, C_IVORY, C_RED, C_IVORY, C_ORANGE, C_IVORY};
+    cv_begin(240, 58, C_NAVY);                  /* (two canvases: one holds at most 64 rows) */
+    cv_runs(8, 2, L1, C1, 5);
+    cv_runs(8, 21, L2, C2, 3);
+    cv_runs(8 + 7 * 8 + 5, 40, L3, C3, 2);      /* (under Ip IIp) */
+    cv_blit(0, 138);
+    cv_begin(240, 44, C_NAVY);
+    cv_runs(8, 1, L4, C4, 6);
+    cv_runs(8, 20, L5, C5, 6);
+    cv_blit(0, 196);
+}
+
 static void draw_status(const char *msg, uint16_t colour)
 {
     char s[32] = "KEYS F3-G5  TUNE +00";
@@ -701,7 +739,7 @@ static void app_main(void)
     uint32_t net_tabs = ~0u, t_msg = 0, t_cpu = 0, cpu_over = 0, tnotes = 0;
     char cpu_txt[40] = "CPU";
     uint32_t drawn_note = ~0u, drawn_lever = ~0u, drawn_cpl = ~0u, drawn_st = ~0u, drawn_tabs = ~0u, drawn_pre = ~0u;
-    uint32_t drawn_stops = ~0u, drawn_opt = ~0u, opts = 0, osel = 0;
+    uint32_t drawn_stops = ~0u, drawn_opt = ~0u, opts = 0, osel = 0, drawn_guide = 0;
     const char *msg = 0;
     uint8_t key_note[27] = {0};
     uint32_t kon = 0;                           /* keys whose note is in the stack */
@@ -771,6 +809,7 @@ static void app_main(void)
             b &= ~(1u << BTN_HOME);
             lcd_fill(0, 0, 240, 240, C_NAVY);
             drawn_stops = drawn_tabs = drawn_pre = drawn_note = drawn_cpl = drawn_lever = drawn_st = drawn_opt = ~0u;
+            drawn_guide = 0;
         }
         if (b & (1u << BTN_GLO) || (stops && b & (1u << BTN_HOME))) {   /* PLAY <-> STOPS */
             uint32_t was = stops;
@@ -895,9 +934,22 @@ static void app_main(void)
                         | (uint32_t)set.glide << 12;
             if (st != drawn_opt) { drawn_opt = st; draw_options(osel); }
         } else {
-        if (stops != drawn_stops) { drawn_stops = stops; draw_title(stops); drawn_st = drawn_note = ~0u; }
+        if (stops != drawn_stops) {             /* PLAY <-> STOPS: the lower half changes over */
+            drawn_stops = stops; draw_title(stops);
+            drawn_st = drawn_note = drawn_cpl = drawn_lever = ~0u;
+            drawn_guide = 0;
+        }
         if (set.tabs != drawn_tabs) { drawn_tabs = set.tabs; draw_rail(); }
         if ((set.preset | edited << 15) != drawn_pre) { drawn_pre = set.preset | edited << 15; draw_preset(); }
+        if (stops) {                            /* the guide; a message shows over its foot for a moment */
+            if (msg) {
+                if (drawn_st != 0xFFFFFFFEu) { drawn_st = 0xFFFFFFFEu; draw_status(msg, C_AMBER); drawn_guide = 0; }
+            } else if (!drawn_guide) {
+                drawn_guide = 1;
+                drawn_st = ~0u;
+                draw_guide();
+            }
+        } else {
         if (((uint32_t)(top + 1) | (uint32_t)(set.coupler + 1) << 8) != drawn_note) {
             drawn_note = (uint32_t)(top + 1) | (uint32_t)(set.coupler + 1) << 8;
             drawn_lever = lever;
@@ -906,11 +958,12 @@ static void app_main(void)
         if ((uint32_t)(set.coupler + 1) != drawn_cpl) { drawn_cpl = (uint32_t)(set.coupler + 1); draw_coupler(); }
         if (lever != drawn_lever) { drawn_lever = lever; draw_orbit(stops); }
         if (msg && drawn_st != 0xFFFFFFFEu) { drawn_st = 0xFFFFFFFEu; draw_status(msg, C_AMBER); }
-        else if (!msg && (stops || cpu_over)) {
+        else if (!msg && cpu_over) {
             if (drawn_st != 0xFFFFFFFDu) { drawn_st = 0xFFFFFFFDu; draw_status(cpu_txt, cpu_over ? C_AMBER : C_CHROME); }
         } else if (!msg && ((uint32_t)set.window | (uint32_t)(set.tune + 50) << 1) != drawn_st) {
             drawn_st = (uint32_t)set.window | (uint32_t)(set.tune + 50) << 1;
             draw_status(0, C_CHROME);
+        }
         }
         }
         idle_ok = 0;

@@ -54,7 +54,7 @@ is why a short list of switches could imitate violins, oboes, trumpets and organ
 | **5, 6** | Capacitors on a second winding of the same coil | Colour that appears only alongside other tablets |
 | **7, 8, 9** | Capacitors that bridge round the coils, 9 the largest | More of the upper harmonics get through: brighter, more cutting |
 | **O** | A resistor across the last coil | Damps the resonances: smoother, rounder |
-| **A** | A capacitor from the middle of the coil chain to ground | Cuts upper harmonics part-way along |
+| **A** | A capacitor from the middle of the coil chain to ground | A forward, vocal mid-range |
 | **B** | Grounds the middle of the coil chain | Only the thin bypass path is left: a thin, reedy tone (A no longer has any effect) |
 | **V** | A capacitor at the network's input | Darkens the upper harmonics: a gentler alternative to O |
 | **P** | Shortens the control valve's delay | Each note starts with a sharp, percussive peak instead of swelling in |
@@ -65,7 +65,8 @@ is why a short list of switches could imitate violins, oboes, trumpets and organ
 ### STOPS mode: the tablets
 
 Press **GLO** and the keyboard becomes the row of tablets. Each key turns one on or off, and its LED shows which are
-down. **GLO** or **HOME** goes back to playing.
+down. **GLO** or **HOME** goes back to playing. The lower half of the screen shows a short guide to what each tablet
+does, coloured like the tablet caps.
 
 To hear the tablets while you set them:
 - **FX, SEL, ENV, LFO, EDIT** play **C4, D4, E4, F4, G4** for as long as you hold them; their lights glow in STOPS mode.
