@@ -1,6 +1,6 @@
 # CLAVIOLINE for the M-VAVE FM-1
 
-<img src="docs/screen.png" width="240" align="right" alt="The FM-1 screen: the tablet rail, the preset, the note, the coupler and the knee lever">
+<img src="docs/screen.png" width="240" align="right" alt="The FM-1 screen: the tablets in their groups, the preset, the note, the coupler and the knee lever dial">
 
 Custom firmware that turns the FM-1 into a **Clavioline**, the valve keyboard Constant Martin invented in 1947 and
 Selmer built in England in the 1950s. It is the reedy, vibrato-laden lead voice of records like "Telstar".
@@ -33,7 +33,7 @@ silence starts the same way.
 |---|---|---|
 | Keys | Play | The 36-key keyboard, F to E |
 | GLO | STOPS mode: all the tablets, including vibrato, P and the sub-octaves | The tablet rail |
-| **PRESETS** knob | **Knee lever**: the expression swell. Turn quickly for big moves, slowly for small ones. Fully left is silent. MIDI CC 11 moves it too | The lever under the keyboard, pushed with the knee |
+| **PRESETS** knob | **Knee lever**: the expression swell, shown on the dial. Turn quickly for big moves, slowly for small ones. Fully left is silent. MIDI CC 11 moves it too | The lever under the keyboard, pushed with the knee |
 | MASTER | Volume | The amplifier |
 | OCT− / OCT+ | Octave coupler: LOW / MED / HIGH | The transposing slider |
 | ALGORITHM | Shift the FM-1's 27 keys up an octave to reach the top of the 36-key range | |
@@ -65,8 +65,11 @@ is why a short list of switches could imitate violins, oboes, trumpets and organ
 
 ### STOPS mode: the tablets
 
-Press **GLO** and the keyboard becomes the row of tablets. Each key turns one on or off, and its LED shows which are
-down. **GLO** or **HOME** goes back to playing.
+<img src="docs/screen-stops.png" width="240" align="right" alt="STOPS mode: the tablets and a key map showing which key sets which tablet">
+
+Press **GLO** and the keyboard becomes the row of tablets. The title turns orange and the lower half of the screen
+shows a map of the keys, each labelled with its tablet; keys whose tablets are down light orange, on the screen and
+on the FM-1. Each key turns its tablet on or off. **GLO** or **HOME** goes back to playing.
 
 To hear the tablets while you set them:
 - **FX, SEL, ENV, LFO, EDIT** play **C4, D4, E4, F4, G4** for as long as you hold them; their lights glow in STOPS mode.
@@ -74,8 +77,8 @@ To hear the tablets while you set them:
 
 ```
  black keys:    F#3  G#3  A#3   C#4                         A#4   C#5   D#5   F#5
-                vib  vib  vib   vibrato                     Sub   Sub   Sub   Sub
-                III  II   I     depth (+)                   I p   II p  I f   II f
+                vib  vib  vib   vibrato depth               Sub   Sub   Sub   Sub
+                III  II   I     AMP                         I p   II p  I f   II f
  white keys: F3  G3  A3  B3  C4  D4  E4  F4  G4  A4  B4  C5  D5  E5  F5
               1   2   3   4   5   6   7   8   9   O   A   B   V   P   (all off)
 ```

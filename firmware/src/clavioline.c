@@ -500,25 +500,72 @@ static void draw_title_text(const char *t, uint16_t colour)   /* stars, the titl
     cv_blit(0, 0);
 }
 
-static void draw_rail(void)                     /* the tablets, in two rows, on a panel with chrome edges */
+/* a small engraved-label font, 3 x 5, drawn at 1x or 2x: A-Z, 0-9, '-', 'p', 'f' */
+static const uint16_t TINY_AZ[26] = {
+    0x2BED, 0x6BAE, 0x3923, 0x6B6E, 0x79A7, 0x79A4, 0x396B, 0x5BED, 0x2492, 0x126A, 0x5BAD, 0x4927, 0x5FED, 0x6B6D, 0x2B6A, 0x6BA4, 0x2B73, 0x6BAD, 0x388E, 0x7492, 0x5B6F, 0x5B6A, 0x5BFD, 0x5AAD, 0x5A92, 0x72A7};
+static const uint16_t TINY_09[10] = {0x7B6F, 0x2C97, 0x62A7, 0x628E, 0x5BC9, 0x798E, 0x39EF, 0x7292, 0x7BEF, 0x7BCE};
+
+static uint16_t tiny_glyph(char ch)
+{
+    if (ch >= 'A' && ch <= 'Z') return TINY_AZ[ch - 'A'];
+    if (ch >= '0' && ch <= '9') return TINY_09[ch - '0'];
+    if (ch == '-') return 0x01C0;
+    if (ch == 'p') return 0x0D74;
+    if (ch == 'f') return 0x35D2;
+    return 0;
+}
+
+static int32_t tiny_w(const char *s, int32_t sc)
+{
+    int32_t n = 0;
+    while (s[n]) n++;
+    return n ? (4 * n - 1) * sc : 0;
+}
+
+static void cv_tiny(int32_t x, int32_t y, const char *s, uint16_t c, int32_t sc)
+{
+    for (; *s; s++, x += 4 * sc) {
+        uint16_t g = tiny_glyph(*s);
+        int32_t r, k;
+        for (r = 0; r < 5; r++)
+            for (k = 0; k < 3; k++)
+                if (g >> (14 - r * 3 - k) & 1u) cv_rect(x + k * sc, y + r * sc, sc, sc, c);
+    }
+}
+
+static void cv_caption(int32_t x0, int32_t x1, int32_t y, const char *s, uint16_t c)   /* |--- LABEL ---| */
+{
+    int32_t w = tiny_w(s, 2), m = (x0 + x1) / 2;
+    cv_tiny(m - w / 2, y, s, c, 2);
+    cv_rect(x0, y + 4, m - w / 2 - 4 - x0, 1, C_FAINT);
+    cv_rect(m + w / 2 + 4, y + 4, x1 - (m + w / 2 + 4), 1, C_FAINT);
+    cv_rect(x0, y + 4, 1, 5, C_FAINT);
+    cv_rect(x1 - 1, y + 4, 1, 5, C_FAINT);
+}
+
+static void draw_rail(uint32_t stops)           /* the tablets, in two captioned rows, on a panel with chrome edges */
 {
     static const char *const L1[14] = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "O", "A", "B", "V", "P"};
-    static const char *const L2[8] = {"III", "II", "I", "+", "Ip", "IIp", "If", "IIf"};   /* in the black-key order */
+    static const char *const L2[8] = {"III", "II", "I", "AMP", "Ip", "IIp", "If", "IIf"};   /* in the black-key order */
     static const uint8_t B2[8] = {T_VIB3, T_VIB2, T_VIB1, T_AMP, T_SUB1P, T_SUB2P, T_SUB1F, T_SUB2F};
+    uint16_t edge = stops ? C_ORANGE : C_CHROME;   /* STOPS: the panel trimmed in orange */
     uint32_t i, tabs = set.tabs;
-    cv_begin(240, 40, C_NAVY);
-    cv_rect(2, 1, 236, 39, C_PANEL);
-    cv_rect(2, 0, 236, 1, C_CHROME);
+    cv_begin(240, 42, C_NAVY);
+    cv_rect(2, 1, 236, 41, C_PANEL);
+    cv_rect(2, 0, 236, 1, edge);
+    cv_caption(8, 214, 2, "TONE", C_CHROME);
     for (i = 0; i < 14u; i++)
-        cv_tablet(8 + (int32_t)i * 16, 4, 14, 28, i == 13u ? C_ORANGE : C_RED, (int32_t)(tabs >> i & 1u), L1[i], C_PANEL);
+        cv_tablet(8 + (int32_t)i * 16, 14, 14, 24, i == 13u ? C_ORANGE : C_RED, (int32_t)(tabs >> i & 1u), L1[i], C_PANEL);
     cv_blit(0, 40);
-    cv_begin(240, 32, C_NAVY);
-    cv_rect(2, 0, 236, 30, C_PANEL);
-    cv_rect(2, 30, 236, 1, C_CHROME);
+    cv_begin(240, 36, C_NAVY);
+    cv_rect(2, 0, 236, 35, C_PANEL);
+    cv_rect(2, 35, 236, 1, edge);
+    cv_caption(6, 113, 1, "VIBRATO", C_TEAL);
+    cv_caption(122, 230, 1, "SUB-OCTAVE", C_VIOLET);
     for (i = 0; i < 8u; i++)
-        cv_tablet((i < 4u ? 6 : 14) + (int32_t)i * 27, 1, 26, 22, i < 4u ? C_TEAL : C_VIOLET,
+        cv_tablet((i < 4u ? 6 : 14) + (int32_t)i * 27, 12, 26, 19, i < 4u ? C_TEAL : C_VIOLET,
                   (int32_t)(tabs >> B2[i] & 1u), L2[i], C_PANEL);
-    cv_blit(0, 80);
+    cv_blit(0, 82);
 }
 
 static void draw_preset(void)                   /* the preset in a capsule */
@@ -532,64 +579,117 @@ static void draw_preset(void)                   /* the preset in a capsule */
     if (edited) s[i++] = '*';
     s[i] = 0;
     w = text_w(&FONT_S, s) + 12;
-    cv_begin(240, 26, C_NAVY);
-    cv_disc(120 - w / 2, 13, 10, C_PANEL);
-    cv_disc(120 + w / 2, 13, 10, C_PANEL);
-    cv_rect(120 - w / 2, 3, w, 21, C_PANEL);
-    cv_disc(120 - w / 2 - 16, 13, 2, C_TEAL);
-    cv_disc(120 + w / 2 + 16, 13, 2, C_TEAL);
-    cv_text(120 - (w - 12) / 2, 5, &FONT_S, s, C_IVORY);
-    cv_blit(0, 112);
+    cv_begin(240, 24, C_NAVY);
+    cv_disc(120 - w / 2, 12, 10, C_PANEL);
+    cv_disc(120 + w / 2, 12, 10, C_PANEL);
+    cv_rect(120 - w / 2, 2, w, 21, C_PANEL);
+    cv_disc(120 - w / 2 - 16, 12, 2, C_TEAL);
+    cv_disc(120 + w / 2 + 16, 12, 2, C_TEAL);
+    cv_text(120 - (w - 12) / 2, 4, &FONT_S, s, C_IVORY);
+    cv_blit(0, 118);
 }
 
-static void draw_note(void)                     /* the note, between two orbit marks */
+#define LOW_Y 142                               /* the lower part: note, coupler and knee dial; or the STOPS key map */
+
+static void draw_left(void)                     /* PLAY: the note between orbit marks, the coupler lamps under it */
 {
     static const char *const NAME[12] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
+    static const char *const W[3] = {"LOW", "MED", "HIGH"};
     char s[8] = "-";
-    int32_t w;
+    int32_t w, i;
     if (top >= 0) {
-        int32_t p = top + 12 * set.coupler, i = 0;
+        int32_t p = top + 12 * set.coupler, n = 0;
         const char *q;
         if (p < 0) p = 0;
-        for (q = NAME[p % 12]; *q; ) s[i++] = *q++;
-        if (p >= 12) s[i++] = (char)('0' + p / 12 - 1);
-        s[i] = 0;
+        for (q = NAME[p % 12]; *q; ) s[n++] = *q++;
+        if (p >= 12) s[n++] = (char)('0' + p / 12 - 1);
+        s[n] = 0;
     }
     w = text_w(&FONT_L, s);
-    cv_begin(240, 34, C_NAVY);
-    cv_line(40, 17, 120 - w / 2 - 12, 17, C_FAINT);
-    cv_line(120 + w / 2 + 12, 17, 200, 17, C_FAINT);
-    cv_disc(120 - w / 2 - 12, 17, 2, C_TEAL);
-    cv_disc(120 + w / 2 + 12, 17, 2, C_TEAL);
-    cv_text(120 - w / 2, 1, &FONT_L, s, C_MINT);
-    cv_blit(0, 138);
+    cv_begin(128, 76, C_NAVY);
+    cv_line(6, 20, 64 - w / 2 - 10, 20, C_FAINT);
+    cv_line(64 + w / 2 + 10, 20, 122, 20, C_FAINT);
+    cv_disc(64 - w / 2 - 10, 20, 2, C_TEAL);
+    cv_disc(64 + w / 2 + 10, 20, 2, C_TEAL);
+    cv_text(64 - w / 2, 4, &FONT_L, s, C_MINT);
+    for (i = 0; i < 3; i++) {
+        int32_t x = 22 + i * 42, on = i - 1 == set.coupler;
+        cv_disc(x, 49, 6, on ? C_ORANGE : C_PANEL);
+        if (on) { cv_pset(x - 2, 47, C_IVORY); cv_pset(x - 1, 46, C_IVORY); }
+        cv_text(x - text_w(&FONT_S, W[i]) / 2, 58, &FONT_S, W[i], on ? C_IVORY : C_FAINT);
+    }
+    cv_blit(0, LOW_Y);
 }
 
-static void draw_coupler(void)                  /* three lamps */
+static void draw_dial(void)                     /* PLAY: the knee lever as a 1950s panel meter, needle and scale */
 {
-    static const char *const W[3] = {"LOW", "MED", "HIGH"};
-    uint32_t i;
-    cv_begin(240, 22, C_NAVY);
-    for (i = 0; i < 3u; i++) {
-        int32_t x = 22 + (int32_t)i * 74, on = (int32_t)i - 1 == set.coupler;
-        cv_disc(x, 11, 6, on ? C_ORANGE : C_PANEL);
-        if (on) { cv_pset(x - 2, 9, C_IVORY); cv_pset(x - 1, 8, C_IVORY); }
-        cv_text(x + 11, 3, &FONT_S, W[i], on ? C_IVORY : C_FAINT);
+    const int32_t cx = 56, cy = 68;
+    char v[6], *q = v;
+    uint32_t pc = (lever * 100u + LEVER_MAX / 2u) / LEVER_MAX, k;
+    int32_t c, s;
+    cv_begin(112, 76, C_NAVY);
+    for (k = 0; k <= 64u; k++) {                /* the scale: a dotted arc, ticks every eighth, red-orange at the top */
+        uint32_t ph = (64u - k) << 25;          /* (180 degrees at 0, 0 degrees at full) */
+        c = sine(ph + (1u << 30)); s = sine(ph);
+        cv_pset(cx + (c * 50) / 32767, cy - (s * 50) / 32767, k <= lever ? C_TEAL : C_FAINT);
+        if (!(k & 7u)) {
+            uint16_t tc = k >= 56u ? C_ORANGE : k >= 48u ? C_MINT : C_CHROME;
+            cv_line(cx + (c * 42) / 32767, cy - (s * 42) / 32767, cx + (c * 48) / 32767, cy - (s * 48) / 32767, tc);
+        }
     }
-    cv_blit(0, 172);
+    {                                           /* the needle */
+        uint32_t ph = (uint32_t)(LEVER_MAX - (lever > LEVER_MAX ? LEVER_MAX : lever)) << 25;
+        c = sine(ph + (1u << 30)); s = sine(ph);
+        cv_line(cx, cy, cx + (c * 44) / 32767, cy - (s * 44) / 32767, C_ORANGE);
+        cv_line(cx + 1, cy, cx + 1 + (c * 44) / 32767, cy - (s * 44) / 32767, C_ORANGE);
+    }
+    cv_disc(cx, cy, 5, C_CHROME);
+    cv_disc(cx, cy, 2, C_PANEL);
+    cv_tiny(2, 2, "KNEE", C_IVORY, 2);
+    if (pc >= 100u) *q++ = '1';
+    if (pc >= 10u) *q++ = (char)('0' + pc / 10u % 10u);
+    *q++ = (char)('0' + pc % 10u);
+    *q++ = '%'; *q = 0;
+    cv_text(110 - text_w(&FONT_S, v), 0, &FONT_S, v, C_MINT);
+    cv_blit(128, LOW_Y);
 }
 
-static void draw_lever(void)                    /* the knee lever: a row of lamps, teal, mint, orange */
+static void draw_keymap(void)                   /* STOPS: which key is which tablet; lit keys are tablets down */
 {
-    int32_t i, lit = (int32_t)((lever * 20u + LEVER_MAX - 1u) / LEVER_MAX);
-    cv_begin(240, 24, C_NAVY);
-    cv_text(6, 4, &FONT_S, "KNEE", C_IVORY);
-    for (i = 0; i < 20; i++) {
-        uint16_t c = C_PANEL;
-        if (i < lit) c = i < 12 ? C_TEAL : i < 16 ? C_MINT : C_ORANGE;   /* like a period level meter */
-        cv_rect(52 + i * 9, 6, 7, 12, c);
+    static const char *const WL[15] = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "O", "A", "B", "V", "P", "X"};
+    static const struct { uint8_t k, tab, low; const char *lab; } BK[8] = {   /* key (0 = F3), tablet, label row */
+        {1, T_VIB3, 0, "III"}, {3, T_VIB2, 1, "II"}, {5, T_VIB1, 0, "I"}, {8, T_AMP, 0, "AMP"},
+        {17, T_SUB1P, 0, "Ip"}, {20, T_SUB2P, 1, "IIp"}, {22, T_SUB1F, 0, "If"}, {25, T_SUB2F, 0, "IIf"}};
+    static const uint8_t BLACK[12] = {0, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0};   /* from F */
+    uint32_t k, wi = 0, tabs = set.tabs;
+    cv_begin(240, 64, C_NAVY);
+    for (k = 0; k < 25u; k++) {                 /* the white keys F3 .. F5 */
+        int32_t x = 4 + (int32_t)wi * 15, on;
+        if (BLACK[k % 12u]) continue;
+        on = wi < 14u && (tabs >> wi & 1u);
+        cv_rect(x, 26, 14, 38, on ? C_ORANGE : C_IVORY);
+        cv_text(x + (14 - text_w(&FONT_S, WL[wi])) / 2, 46, &FONT_S, WL[wi], wi == 14u ? C_RED : C_INK);
+        wi++;
     }
-    cv_blit(0, 194);
+    for (k = 0, wi = 0; k < 26u; k++) {         /* the black keys, F#3 .. F#5, and the labels of those that are tablets */
+        int32_t x, i, on = 0;
+        if (!BLACK[k % 12u]) { wi++; continue; }
+        x = 4 + (int32_t)wi * 15 - 5;
+        for (i = 0; i < 8; i++)
+            if (BK[i].k == k) {
+                uint16_t c = i < 4 ? C_TEAL : C_VIOLET;
+                int32_t ly = BK[i].low ? 13 : 1, w = tiny_w(BK[i].lab, 2), lx = x + 5 - w / 2;
+                on = (int32_t)(tabs >> BK[i].tab & 1u);
+                if (lx > 238 - w) lx = 238 - w;
+                cv_tiny(lx, ly, BK[i].lab, on ? C_ORANGE : c, 2);
+                cv_rect(x + 5, ly + 11, 1, 26 - ly - 11, c);
+            }
+        cv_rect(x, 26, 10, 22, on ? C_ORANGE : C_INK);
+        if (!on) cv_rect(x + 1, 26, 8, 1, C_FAINT);
+    }
+    cv_blit(0, LOW_Y + 4);
+    lcd_fill(0, LOW_Y, 240, 4, C_NAVY);
+    lcd_fill(0, LOW_Y + 68, 240, 8, C_NAVY);
 }
 
 static void draw_status(const char *msg, uint16_t colour)
@@ -878,15 +978,20 @@ static void app_main(void)
                         | (uint32_t)set.glide << 12;
             if (st != drawn_opt) { drawn_opt = st; draw_options(osel); }
         } else {
-        if (stops != drawn_stops) { drawn_stops = stops; draw_title(stops); drawn_st = ~0u; }
-        if (set.tabs != drawn_tabs) { drawn_tabs = set.tabs; draw_rail(); }
-        if ((set.preset | edited << 15) != drawn_pre) { drawn_pre = set.preset | edited << 15; draw_preset(); }
-        if (((uint32_t)(top + 1) | (uint32_t)(set.coupler + 1) << 8) != drawn_note) {
-            drawn_note = (uint32_t)(top + 1) | (uint32_t)(set.coupler + 1) << 8;
-            draw_note();
+        if (stops != drawn_stops) {             /* PLAY <-> STOPS: the lower part changes over */
+            drawn_stops = stops; draw_title(stops);
+            drawn_st = drawn_tabs = drawn_note = drawn_lever = drawn_cpl = ~0u;
         }
-        if ((uint32_t)(set.coupler + 1) != drawn_cpl) { drawn_cpl = (uint32_t)(set.coupler + 1); draw_coupler(); }
-        if (lever != drawn_lever) { drawn_lever = lever; draw_lever(); }
+        if (set.tabs != drawn_tabs) {
+            drawn_tabs = set.tabs; draw_rail(stops);
+            if (stops) draw_keymap();
+        }
+        if ((set.preset | edited << 15) != drawn_pre) { drawn_pre = set.preset | edited << 15; draw_preset(); }
+        if (!stops && ((uint32_t)(top + 1) | (uint32_t)(set.coupler + 1) << 8) != drawn_note) {
+            drawn_note = (uint32_t)(top + 1) | (uint32_t)(set.coupler + 1) << 8;
+            draw_left();
+        }
+        if (!stops && lever != drawn_lever) { drawn_lever = lever; draw_dial(); }
         if (msg && drawn_st != 0xFFFFFFFEu) { drawn_st = 0xFFFFFFFEu; draw_status(msg, C_AMBER); }
         else if (!msg && (stops || cpu_over)) {
             if (drawn_st != 0xFFFFFFFDu) { drawn_st = 0xFFFFFFFDu; draw_status(cpu_txt, cpu_over ? C_AMBER : C_CHROME); }
