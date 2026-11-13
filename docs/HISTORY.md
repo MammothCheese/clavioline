@@ -160,22 +160,6 @@ Measurements or clean recordings of a surviving instrument would settle these:
 - the vibrato's depth, and what happens when two speed tablets are down together;
 - the oscillator's exact wave shape, and how the control valve's opening curves;
 - what the Concert's "muting" switches on its sub-octave stage did.
-
-## For the technically minded: the traced tone network
-
-Every printed value from Fig. 4 of the 1952 article, with the Concert drawing's values where noted. L1–L4 are
-windings on one core: L4 and L2 in series, their junction with L1 a tap, L3 a separate secondary. L5 is a separate
-coil.
-
-```
-source   control valve anode (100 kΩ load, Concert) --0.02 µF (Concert)-- IN
-IN-OUT   C30 100 pF, always;  + C24 200 pF (7), C25 0.005 µF (8), C26 0.015 µF (9)
-IN       C28 0.001 µF to ground;  R31 20 kΩ + C29 0.05 µF to ground;  R32 knee lever to ground
-         C17 0.01 µF (see "Tablet V") + R29 5 kΩ to ground when V is down (R30 3 MΩ otherwise)
-IN-NB    L4 + L2              NB   C27 0.02 µF to ground (A);  short to ground (B)
-NB-N1    L1                   N1   R26 250 kΩ ∥ C20 0.005 µF (3);  R27 250 kΩ ∥ C21 0.015 µF (4)
-                                   C18 0.02 µF (1);  C19 0.005 µF (2)
-N1-OUT   L5;  R28 10 kΩ across it (O)
 L3       ground - N3;   N3   C22 0.01 µF (5);  C23 0.005 µF (6)
 OUT      to the amplifier
 ```
