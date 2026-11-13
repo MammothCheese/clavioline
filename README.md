@@ -86,7 +86,7 @@ To hear the tablets while you set them:
 - **PLUCK DECAY** (off at every power-on; 0.3, 0.6, 1.2 or 2.5 s): every key press starts at full level and fades away.
   On the original, the player made this by flicking the knee lever back, which is awkward on the PRESETS knob.
 - **DECAY ON**: only on notes with tablet **P** down, or on all notes.
-- **KNEE SPEED** (FINE, GENTLE, NORMAL, FAST, VERY FAST; FAST to start with): how far each click of the PRESETS
+- **KNEE SPEED** (FINE, GENTLE, NORMAL, FAST, VERY FAST; NORMAL to start with): how far each click of the PRESETS
   knob moves the knee lever. FINE is one step per click however fast you turn, for slow, even swells; the faster
   settings cover the lever's range in fewer turns.
 - **PORTAMENTO** (off at every power-on; 15, 30, 60, 120, 250 or 500 ms): each new note glides from the last one's pitch.

@@ -124,11 +124,10 @@ from the lowest note, 87 Hz, up), and C17 is left out while V is up (within 0.07
 |---|---|---|
 | PLUCK DECAY | **OFF** (default), 0.3, 0.6, 1.2, 2.5 s | Each key press starts at full level, then fades 40 dB over the time chosen, standing in for flicking the knee lever back |
 | DECAY ON | **P NOTES** (default), ALL NOTES | Only while tablet P is down, or on every note |
-| KNEE SPEED | FINE, GENTLE, NORMAL, **FAST**, VERY FAST | Lever steps (of 64) per PRESETS click, turning slowly / medium (<70 ms between clicks) / fast (<30 ms): 1/1/1, 1/1/2, 1/2/4, 2/4/8, 3/6/12 |
+| KNEE SPEED | FINE, GENTLE, **NORMAL**, FAST, VERY FAST | Lever steps (of 64) per PRESETS click, turning slowly / medium (<70 ms between clicks) / fast (<30 ms): 1/1/1, 1/1/2, 1/2/4, 2/4/8, 3/6/12 |
 | PORTAMENTO | **OFF**, 15, 30, 60, 120, 250, 500 ms | The oscillator's pitch follows the note with that time constant (an RC-like approach in frequency, updated every 5.8 ms block, before the vibrato). After the idle rest a note starts at its own pitch |
 
-Settings version 8: older settings keep the user slots, tuning and keyboard window; the pluck decay goes to OFF and
-the knee speed to FAST. Every power-on starts on the CLAVIOLINE TONE
+Settings version 9: older settings keep the user slots, tuning and keyboard window; the knee speed goes to NORMAL. Every power-on starts on the CLAVIOLINE TONE
 preset, with the pluck decay and the portamento off.
 
 ## Tests

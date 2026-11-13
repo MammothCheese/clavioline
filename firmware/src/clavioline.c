@@ -338,10 +338,10 @@ static struct {
     uint8_t pad3[4];                            /* (versions 6, 7: an arpeggiator, since removed) */
     uint8_t knee, glide, pad4[2];               /* OPTIONS: knee lever speed 0..4; portamento 0 = off, 1..6 */
 } set;
-#define SET_VER 8u
+#define SET_VER 9u
 #define SET_V5_SIZE ((uint32_t)((uint8_t *)&set.pad3 - (uint8_t *)&set))   /* (versions 3..5 ended there) */
 #define SET_V6_SIZE ((uint32_t)((uint8_t *)&set.knee - (uint8_t *)&set))   /* (version 6 there) */
-#define KNEE_FAST 3u
+#define KNEE_NORMAL 2u
 
 static uint32_t lever = 48;                     /* the knee lever (not saved): 3/4 open at power-on */
 static uint8_t cnt[128];                        /* how many keys / MIDI notes / the drone hold each note */
@@ -689,22 +689,22 @@ static void app_main(void)
     uint8_t key_note[27] = {0};
     uint32_t kon = 0;                           /* keys whose note is in the stack */
 
-    if (settings_load(&set, sizeof set) == 0 && set.ver == 7u) {
-        set.ver = SET_VER;                      /* from version 7: the new defaults (decay off, knee FAST); the glide */
-        set.decay = 0; set.knee = KNEE_FAST;    /* times move up one, for the new 15 ms */
-        if (set.glide) set.glide++;
+    if (settings_load(&set, sizeof set) == 0 && (set.ver == 7u || set.ver == 8u)) {
+        if (set.ver == 7u && set.glide) set.glide++;   /* (from 7: the glide times move up one, for the new 15 ms) */
+        set.ver = SET_VER;                      /* from versions 7, 8: the knee speed back to NORMAL */
+        set.knee = KNEE_NORMAL;
     } else if (settings_load(&set, sizeof set) == 0) {
     } else if ((settings_load(&set, SET_V6_SIZE) == 0 && set.ver == 6u)
                || (settings_load(&set, SET_V5_SIZE) == 0 && set.ver >= 3u && set.ver <= 5u)) {
         set.ver = SET_VER;                      /* from versions 3..6: keep the slots, tuning, window */
-        set.decay = 0; set.knee = KNEE_FAST; set.glide = 0;
+        set.decay = 0; set.knee = KNEE_NORMAL; set.glide = 0;
     }
     memset(set.pad3, 0, sizeof set.pad3);
     if (set.ver != SET_VER || set.coupler < -1 || set.coupler > 1 || set.window > 1u || set.tune < -50 || set.tune > 50
         || set.preset >= NPRESET || set.decay > 4u || set.decay_all > 1u || set.knee > 4u || set.glide > 6u) {
         memset(&set, 0, sizeof set);            /* nothing usable stored: afresh (pluck decay off, no portamento) */
         set.ver = SET_VER;
-        set.knee = KNEE_FAST;
+        set.knee = KNEE_NORMAL;
     }
     apply_preset(P_CLAVIOLINE);                 /* every power-on starts on CLAVIOLINE TONE (user slots are kept) */
     set.decay = 0;                              /* ... with the pluck decay and the portamento off */
