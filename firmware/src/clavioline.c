@@ -708,7 +708,8 @@ static char *put_pct(char *p, uint32_t pm)      /* per mille -> "nn%" */
 /* ---- the battery: a low-battery warning (not on the original) ----------------------------------------- */
 /* The battery reaches the ADC (ch3) through a divider whose values no document gives. BATT_LOW is about 10 % left
  * for a lithium cell (~3.6 V) through an assumed 1:2 divider and a 3.3 V reference: ESTIMATE. Hold HOME in PLAY to
- * read the raw value, to calibrate it. On USB the reading is the charging voltage: no warning. */
+ * read the raw value, to calibrate it. The reading does not follow USB power, so the warning hides while a computer
+ * is connected (a charger with no data lines cannot be told apart). */
 #define BATT_LOW 558
 #define BATT_OK 570                             /* (hysteresis: the warning clears above this) */
 static int32_t batt_avg = -1;                   /* the raw reading x16, smoothed over ~4 s; -1 = none yet */
@@ -724,6 +725,19 @@ static int32_t batt_read(void)
 #endif
 #else
     return fm1_adc_read(FM1_ADC_BATT);
+#endif
+}
+
+static uint32_t usb_powered(void)              /* plugged in to a computer: the host is sending USB frames */
+{
+#ifdef DINGHY_HOST
+#ifdef HOST_USB
+    return 1u;
+#else
+    return 0u;
+#endif
+#else
+    return usb.up && usb.config && !usb.suspended;
 #endif
 }
 
@@ -1007,7 +1021,7 @@ static void app_main(void)
                 drawn_st = 0x80000000u | raw;
                 draw_status(t, C_CHROME);
             }
-        } else if (!msg && batt_low) {          /* the last ~10 %: LOW BATTERY, blinking slowly (1 s on, 1 s off) */
+        } else if (!msg && batt_low && !usb_powered()) {   /* the last ~10 %: LOW BATTERY, blinking slowly (1 s on, 1 s off) */
             uint32_t on = (fm1_ms / 1000u) & 1u;
             if (drawn_st != 0xFFFFFFFBu - on) { drawn_st = 0xFFFFFFFBu - on; draw_status(on ? "LOW BATTERY" : "", C_ORANGE); }
         } else if (!msg && ((uint32_t)set.window | (uint32_t)(set.tune + 50) << 1) != drawn_st) {
