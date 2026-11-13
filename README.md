@@ -122,14 +122,9 @@ The full story is in [docs/HISTORY.md](docs/HISTORY.md).
 ## Installing
 
 1. Get `clavioline.fwsc` from this repository's **Releases** page, or from the latest run on the **Actions** tab.
-2. Install it with the [FM-1 Firmware Hub](https://thefirmwarehub.com) in Chrome or Edge, or over USB:
-   ```sh
-   python3 tools/fm1_install.py clavioline.fwsc
-   ```
-3. At power-on the screen shows `BUILD` and a seven-character code: the commit the firmware was built from. Compare it
-   with the latest commit on GitHub to be sure you have the newest build.
-4. To go back to the official firmware or another one, use the Firmware Hub. It always reaches this firmware over USB.
-5. If anything goes wrong, hold **OCT−** while switching on. That starts the USB rescue: no sound, only the updater.
+2. Install it with the [FM-1 Firmware Hub](https://thefirmwarehub.com).
+3. To go back to the official firmware or another one, use the Firmware Hub. It always reaches this firmware over USB.
+4. If anything goes wrong, hold **OCT−** while switching on. That starts the USB rescue: no sound, only the updater.
 
 Installing firmware is at your own risk; keep a backup of your FM-1.
 
