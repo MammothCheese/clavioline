@@ -31,8 +31,8 @@
 # coupler HIGH (OCT+), knee lever down and up while holding
 3700 btn 1
 3900 keys 0x80
-4300 enc 6 -40
-4700 enc 6 40
+4300 enc 6 -20
+4700 enc 6 20
 5100 keys 0
 5200 btn 0
 5300 shot

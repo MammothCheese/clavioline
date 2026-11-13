@@ -13,7 +13,7 @@
  *               every power-on starts on CLAVIOLINE TONE
  *   SAVE        store the tablets and the coupler in the user slot shown
  *   GLO         STOPS mode (vibrato, P and the sub-octaves are tablets there); FX SEL ENV LFO EDIT do nothing here
- *   SEQ         NON-HISTORICAL OPTIONS: pluck decay, arpeggiator, knee lever speed, portamento (none on the original)
+ *   SEQ         OPTIONS: pluck decay, knee lever speed, portamento (none of them on the original)
  *   KNOB 1      fine tune +-50 cents (VR6)
  * STOPS mode (GLO or HOME back; nothing is lost)
  *   white keys  F3..E5: tablets 1 2 3 4 5 6 7 8 9 O A B V P;  F5: all tone tablets off
@@ -74,8 +74,9 @@ static volatile uint32_t a_lever;               /* main -> ISR: the knee lever's
 static volatile uint32_t a_decay, a_decay_all;  /* main -> ISR: the pluck decay (Q30 per step, 0 = off), on all notes */
 static volatile uint32_t a_pluck;               /* main -> ISR: counts key presses (each restarts the decay) */
 static volatile uint32_t a_glide;               /* main -> ISR: portamento, Q16 per 256-frame block (0 = off) */
-/* OPTIONS (not on the original): portamento, time constants 30 / 60 / 120 / 250 / 500 ms; 1 - exp(-5.8 ms / T), Q16 */
-static const uint16_t GLIDE_Q16[5] = {11528u, 6044u, 3095u, 1504u, 756u};
+/* OPTIONS (not on the original): portamento, time constants 15 / 30 / 60 / 120 / 250 / 500 ms; 1 - exp(-5.8 ms / T),
+ * Q16 */
+static const uint16_t GLIDE_Q16[6] = {21031u, 11528u, 6044u, 3095u, 1504u, 756u};
 /* OPTIONS (not on the original): the pluck decay, 40 dB down in 0.3 / 0.6 / 1.2 / 2.5 s; per 22.05 kHz step, Q30 */
 static const uint32_t DECAY_Q30[4] = {1072994576u, 1073368135u, 1073554963u, 1073652127u};
 static volatile uint32_t a_sounding;            /* ISR -> main: something can still be heard */
@@ -333,14 +334,13 @@ static struct {
     uint16_t preset; uint16_t pad;
     setup_t user[NUSER];
     uint8_t decay, decay_all, pad2[2];          /* OPTIONS: the pluck decay (0 = off, 1..4), on all notes */
-    uint8_t arp, arp_bpm, arp_oct, pad3;        /* OPTIONS: the arpeggiator (mode, tempo / 2, octaves 1..3) */
-    uint8_t knee, glide, pad4[2];               /* OPTIONS: knee lever speed 0..4; portamento 0 = off, 1..5 */
+    uint8_t pad3[4];                            /* (versions 6, 7: an arpeggiator, since removed) */
+    uint8_t knee, glide, pad4[2];               /* OPTIONS: knee lever speed 0..4; portamento 0 = off, 1..6 */
 } set;
-#define SET_VER 7u
-#define SET_V5_SIZE ((uint32_t)((uint8_t *)&set.arp - (uint8_t *)&set))    /* (versions 3..5 ended there) */
+#define SET_VER 8u
+#define SET_V5_SIZE ((uint32_t)((uint8_t *)&set.pad3 - (uint8_t *)&set))   /* (versions 3..5 ended there) */
 #define SET_V6_SIZE ((uint32_t)((uint8_t *)&set.knee - (uint8_t *)&set))   /* (version 6 there) */
-#define KNEE_NORMAL 2u
-enum { ARP_OFF, ARP_UP, ARP_DOWN, ARP_UPDOWN, ARP_RANDOM, NARP };
+#define KNEE_FAST 3u
 
 static uint32_t lever = 48;                     /* the knee lever (not saved): 3/4 open at power-on */
 static uint8_t cnt[128];                        /* how many keys / MIDI notes / the drone hold each note */
@@ -360,55 +360,12 @@ static void set_pitch(int32_t n)                /* the oscillator's step for a n
 static void update_voice(void)                  /* the highest held note wins, as the key ladder does */
 {
     int32_t n;
-    if (set.arp) return;                        /* (the arpeggiator plays the held notes instead) */
     for (n = 127; n >= 0 && !cnt[n]; n--) ;
     top = n;
     if (n < 0) { a_held = 0; return; }
     last_note = n;
     set_pitch(n);
     a_held = 1;                                 /* (pitch first, then the gate) */
-}
-
-/* The arpeggiator (OPTIONS; not on the original): the held notes in turn, a sixteenth note each, the gate open for
- * the first 60% of each step so every note starts afresh (P plucks each one). Called from the main loop. */
-static struct { uint32_t on, step, t_next, t_off, rnd; int32_t note; } arp;
-
-static void arp_run(void)
-{
-    uint8_t nt[48];
-    uint32_t n = 0, len, i, o, period;
-    int32_t k;
-    if (!set.arp) {
-        if (arp.on) { arp.on = 0; update_voice(); }
-        return;
-    }
-    for (o = 0; o < set.arp_oct; o++)           /* the held notes, low to high, over 1..3 octaves */
-        for (k = 0; k < 128; k++)
-            if (cnt[k] && k + 12 * (int32_t)o < 128 && n < sizeof nt) nt[n++] = (uint8_t)(k + 12 * (int32_t)o);
-    if (!n) {                                   /* nothing held: silence, and the next note starts at once */
-        if (arp.on) { arp.on = 0; a_held = 0; top = -1; }
-        return;
-    }
-    period = 15000u / ((uint32_t)set.arp_bpm * 2u);   /* a sixteenth note, ms */
-    if (!arp.on) { arp.on = 1; arp.step = 0; arp.t_next = fm1_ms; }
-    if ((int32_t)(fm1_ms - arp.t_next) >= 0) {
-        len = set.arp == ARP_UPDOWN && n > 1u ? 2u * n - 2u : n;
-        i = arp.step % len;
-        if (set.arp == ARP_DOWN) i = n - 1u - i;
-        else if (set.arp == ARP_UPDOWN && i >= n) i = len - i;
-        else if (set.arp == ARP_RANDOM) { arp.rnd = arp.rnd * 1664525u + 1013904223u; i = (arp.rnd >> 16) % n; }
-        arp.step++;
-        arp.note = nt[i];
-        top = last_note = arp.note;
-        set_pitch(arp.note);
-        a_held = 1;
-        a_pluck++;
-        arp.t_off = fm1_ms + period * 6u / 10u;
-        arp.t_next += period;
-        if ((int32_t)(fm1_ms - arp.t_next) >= 0) arp.t_next = fm1_ms + period;   /* (a long stall: no catching up) */
-    } else if (a_held && (int32_t)(fm1_ms - arp.t_off) >= 0) {
-        a_held = 0;                             /* the gap that lets the next note start afresh */
-    }
 }
 
 /* ---- presets ------------------------------------------------------------------------------------------ */
@@ -654,37 +611,25 @@ static void draw_status(const char *msg, uint16_t colour)
     cv_blit(0, 218);
 }
 
-#define NOPT 7u
-static void draw_options(uint32_t sel)          /* NON-HISTORICAL OPTIONS: settings the original did not have */
+#define NOPT 4u
+static void draw_options(uint32_t sel)          /* OPTIONS: settings the original did not have */
 {
-    static const char *const NAME[NOPT] = {"PLUCK DECAY", "DECAY ON", "ARPEGGIATOR", "ARP TEMPO", "ARP RANGE",
-                                           "KNEE SPEED", "PORTAMENTO"};
+    static const char *const NAME[NOPT] = {"PLUCK DECAY", "DECAY ON", "KNEE SPEED", "PORTAMENTO"};
     static const char *const KNEE[5] = {"FINE", "GENTLE", "NORMAL", "FAST", "VERY FAST"};
-    static const char *const GLIDE[6] = {"OFF", "30 MS", "60 MS", "120 MS", "250 MS", "500 MS"};
+    static const char *const GLIDE[7] = {"OFF", "15 MS", "30 MS", "60 MS", "120 MS", "250 MS", "500 MS"};
     static const char *const DEC[5] = {"OFF", "0.3 S", "0.6 S", "1.2 S", "2.5 S"};
-    static const char *const ARP[NARP] = {"OFF", "UP", "DOWN", "UP-DOWN", "RANDOM"};
-    static const char *const OCT[3] = {"1 OCT", "2 OCT", "3 OCT"};
-    char bpm[8], *q = bpm;
-    uint32_t i, b = (uint32_t)set.arp_bpm * 2u;
-    if (b >= 100u) *q++ = (char)('0' + b / 100u);
-    *q++ = (char)('0' + b / 10u % 10u);
-    *q++ = (char)('0' + b % 10u);
-    *q++ = ' '; *q++ = 'B'; *q++ = 'P'; *q++ = 'M'; *q = 0;
+    uint32_t i;
     draw_title_text("OPTIONS", C_TEAL);
-    cv_begin(240, 16, C_NAVY);
-    cv_text((240 - text_w(&FONT_S, "NON-HISTORICAL")) / 2, 0, &FONT_S, "NON-HISTORICAL", C_AMBER);
-    cv_blit(0, 40);
     for (i = 0; i < NOPT; i++) {
         const char *v = i == 0u ? DEC[set.decay] : i == 1u ? (set.decay_all ? "ALL NOTES" : "P NOTES")
-                      : i == 2u ? ARP[set.arp] : i == 3u ? bpm : i == 4u ? OCT[set.arp_oct - 1u]
-                      : i == 5u ? KNEE[set.knee] : GLIDE[set.glide];
+                      : i == 2u ? KNEE[set.knee] : GLIDE[set.glide];
         int32_t on = i == sel;
-        cv_begin(240, 21, C_NAVY);
-        if (on) { cv_rect(4, 0, 232, 21, C_PANEL); cv_rect(4, 0, 3, 21, C_TEAL); }
-        cv_text(16, 3, &FONT_S, NAME[i], on ? C_IVORY : C_FAINT);
-        cv_disc(140, 10, 3, on ? C_ORANGE : C_PANEL);
-        cv_text(150, 3, &FONT_S, v, on ? C_ORANGE : C_FAINT);
-        cv_blit(0, 57 + (int32_t)i * 21);
+        cv_begin(240, 36, C_NAVY);
+        if (on) { cv_rect(4, 2, 232, 32, C_PANEL); cv_rect(4, 2, 3, 32, C_TEAL); }
+        cv_text(16, 10, &FONT_S, NAME[i], on ? C_IVORY : C_FAINT);
+        cv_disc(140, 18, 3, on ? C_ORANGE : C_PANEL);
+        cv_text(150, 10, &FONT_S, v, on ? C_ORANGE : C_FAINT);
+        cv_blit(0, 48 + (int32_t)i * 38);
     }
     cv_begin(240, 36, C_NAVY);
     cv_text(12, 2, &FONT_S, "SELECT CHOOSE  KNOB 1 CHANGE", C_CHROME);
@@ -743,22 +688,22 @@ static void app_main(void)
     uint8_t key_note[27] = {0};
     uint32_t kon = 0;                           /* keys whose note is in the stack */
 
-    if (settings_load(&set, sizeof set) == 0) {
-    } else if (settings_load(&set, SET_V6_SIZE) == 0 && set.ver == 6u) {   /* from version 6: keep everything */
-        set.ver = SET_VER;
-        set.knee = KNEE_NORMAL; set.glide = 0;
-    } else if (settings_load(&set, SET_V5_SIZE) == 0 && set.ver >= 3u && set.ver <= 5u) {
-        if (set.ver < 5u) set.decay = 0;        /* from versions 3, 4, 5: keep everything; P is an attack, no decay */
-        set.ver = SET_VER;
-        set.arp = ARP_OFF; set.arp_bpm = 60; set.arp_oct = 1;
-        set.knee = KNEE_NORMAL; set.glide = 0;
+    if (settings_load(&set, sizeof set) == 0 && set.ver == 7u) {
+        set.ver = SET_VER;                      /* from version 7: the new defaults (decay off, knee FAST); the glide */
+        set.decay = 0; set.knee = KNEE_FAST;    /* times move up one, for the new 15 ms */
+        if (set.glide) set.glide++;
+    } else if (settings_load(&set, sizeof set) == 0) {
+    } else if ((settings_load(&set, SET_V6_SIZE) == 0 && set.ver == 6u)
+               || (settings_load(&set, SET_V5_SIZE) == 0 && set.ver >= 3u && set.ver <= 5u)) {
+        set.ver = SET_VER;                      /* from versions 3..6: keep the slots, tuning, window */
+        set.decay = 0; set.knee = KNEE_FAST; set.glide = 0;
     }
+    memset(set.pad3, 0, sizeof set.pad3);
     if (set.ver != SET_VER || set.coupler < -1 || set.coupler > 1 || set.window > 1u || set.tune < -50 || set.tune > 50
-        || set.preset >= NPRESET || set.decay > 4u || set.decay_all > 1u || set.arp >= NARP || set.arp_bpm < 20u
-        || set.arp_bpm > 120u || set.arp_oct < 1u || set.arp_oct > 3u || set.knee > 4u || set.glide > 5u) {
-        memset(&set, 0, sizeof set);            /* nothing usable stored: afresh */
+        || set.preset >= NPRESET || set.decay > 4u || set.decay_all > 1u || set.knee > 4u || set.glide > 6u) {
+        memset(&set, 0, sizeof set);            /* nothing usable stored: afresh (pluck decay off, no portamento) */
         set.ver = SET_VER;
-        set.arp_bpm = 60; set.arp_oct = 1; set.knee = KNEE_NORMAL;
+        set.knee = KNEE_FAST;
     }
     apply_preset(P_CLAVIOLINE);                 /* every power-on starts on CLAVIOLINE TONE (user slots are kept) */
     fm_compute(&fm_buf[0], set.tabs);           /* the formant filter before the sound starts */
@@ -844,11 +789,8 @@ static void app_main(void)
             int32_t d;
             if (osel == 0u) { d = (int32_t)set.decay + e; set.decay = (uint8_t)(d < 0 ? 0 : d > 4 ? 4 : d); }
             else if (osel == 1u) set.decay_all ^= 1u;
-            else if (osel == 2u) { d = (int32_t)set.arp + e; set.arp = (uint8_t)(d < 0 ? 0 : d >= NARP ? NARP - 1 : d); changed = 1; }
-            else if (osel == 3u) { d = (int32_t)set.arp_bpm + e; set.arp_bpm = (uint8_t)(d < 20 ? 20 : d > 120 ? 120 : d); }
-            else if (osel == 4u) { d = (int32_t)set.arp_oct + e; set.arp_oct = (uint8_t)(d < 1 ? 1 : d > 3 ? 3 : d); }
-            else if (osel == 5u) { d = (int32_t)set.knee + e; set.knee = (uint8_t)(d < 0 ? 0 : d > 4 ? 4 : d); }
-            else { d = (int32_t)set.glide + e; set.glide = (uint8_t)(d < 0 ? 0 : d > 5 ? 5 : d); }
+            else if (osel == 2u) { d = (int32_t)set.knee + e; set.knee = (uint8_t)(d < 0 ? 0 : d > 4 ? 4 : d); }
+            else { d = (int32_t)set.glide + e; set.glide = (uint8_t)(d < 0 ? 0 : d > 6 ? 6 : d); }
             dirty = 1; t_change = fm1_ms;
         }
         if (!opts && (e = fm1_enc_take(ENC_SELECT)) != 0) {
@@ -878,8 +820,6 @@ static void app_main(void)
 
         midi_in();
         if (changed || midi_dirty) { midi_dirty = 0; update_voice(); }
-        arp_run();
-        if (set.arp && arp.on && changed) set_pitch(arp.note);   /* (a coupler or tune change mid-note) */
         a_tabs = set.tabs;
         a_decay = set.decay ? DECAY_Q30[set.decay - 1u] : 0u;
         a_decay_all = set.decay_all;
@@ -931,9 +871,8 @@ static void app_main(void)
         }
         idle_ok = 1;
         if (opts) {
-            uint32_t st = osel | (uint32_t)set.decay << 4 | (uint32_t)set.decay_all << 8 | (uint32_t)set.arp << 9
-                        | (uint32_t)set.arp_bpm << 12 | (uint32_t)set.arp_oct << 20 | (uint32_t)set.knee << 22
-                        | (uint32_t)set.glide << 25;
+            uint32_t st = osel | (uint32_t)set.decay << 4 | (uint32_t)set.decay_all << 8 | (uint32_t)set.knee << 9
+                        | (uint32_t)set.glide << 12;
             if (st != drawn_opt) { drawn_opt = st; draw_options(osel); }
         } else {
         if (stops != drawn_stops) { drawn_stops = stops; draw_title(stops); drawn_st = ~0u; }

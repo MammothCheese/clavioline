@@ -10,8 +10,8 @@
 1100 keys 0
 # SEQ: PORTAMENTO 120 MS; KNEE SPEED VERY FAST; a screen; back
 1300 btn 11
-1350 enc 0 6
-1400 enc 2 3
+1350 enc 0 3
+1400 enc 2 4
 1450 enc 0 -1
 1500 enc 2 2
 1550 shot

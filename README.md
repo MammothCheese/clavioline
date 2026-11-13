@@ -46,7 +46,7 @@ silence starts the same way.
 | SELECT | Presets (see below) | The voicing card |
 | GLO | STOPS mode: all the tablets, including vibrato, P and the sub-octaves | The tablet rail |
 | SAVE | Store the current tablets and coupler in the user slot shown | |
-| SEQ | Non-historical options: pluck decay, arpeggiator, knee lever speed, portamento (see below) | |
+| SEQ | Options: pluck decay, knee lever speed, portamento (see below) | |
 | KNOB 1 | Fine tuning, ±50 cents | The tuning control |
 
 Plucked sounds work as on the original. Choose Banjo, Mandolin or Harpsichord (they have **P** down), then flick the
@@ -78,22 +78,17 @@ The bottom line shows the audio engine's CPU load.
   was matched to a recording of a real Clavioline.
 - **Sub I / Sub II** add the octave and the two octaves below, softly (**p**) or loudly (**f**). They come from the Concert model.
 
-### Non-historical options
+### Options
 
 **SEQ** opens a page of settings that the original did not have. **SELECT** chooses one, **KNOB 1** changes it, and
 **SEQ** goes back.
 - **PLUCK DECAY** (off to start with; 0.3, 0.6, 1.2 or 2.5 s): every key press starts at full level and fades away.
   On the original, the player made this by flicking the knee lever back, which is awkward on the PRESETS knob.
 - **DECAY ON**: only on notes with tablet **P** down, or on all notes.
-- **ARPEGGIATOR** (off to start with; UP, DOWN, UP-DOWN or RANDOM): hold a chord and the notes play in turn, one
-  sixteenth note each. Every note starts afresh, so with **P** down each one plucks. MIDI notes and the STOPS drone
-  join in.
-- **ARP TEMPO**: 40 to 240 BPM (sixteenth notes), 120 to start with.
-- **ARP RANGE**: the held notes over 1, 2 or 3 octaves.
-- **KNEE SPEED** (FINE, GENTLE, NORMAL, FAST, VERY FAST; NORMAL to start with): how far each click of the PRESETS
+- **KNEE SPEED** (FINE, GENTLE, NORMAL, FAST, VERY FAST; FAST to start with): how far each click of the PRESETS
   knob moves the knee lever. FINE is one step per click however fast you turn, for slow, even swells; the faster
   settings cover the lever's range in fewer turns.
-- **PORTAMENTO** (off to start with; 30, 60, 120, 250 or 500 ms): each new note glides from the last one's pitch.
+- **PORTAMENTO** (off to start with; 15, 30, 60, 120, 250 or 500 ms): each new note glides from the last one's pitch.
   After a silence a note starts at its own pitch.
 
 ### Presets
