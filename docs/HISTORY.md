@@ -158,11 +158,4 @@ Measurements or clean recordings of a surviving instrument would settle these:
 - the coil values and losses, and so the exact frequencies and strengths of the tablets' resonances;
 - the knee lever's resistance range and taper ("special construction and grading");
 - the vibrato's depth, and what happens when two speed tablets are down together;
-- the oscillator's exact wave shape, and how the control valve's opening curves;
-- what the Concert's "muting" switches on its sub-octave stage did.
-L3       ground - N3;   N3   C22 0.01 µF (5);  C23 0.005 µF (6)
-OUT      to the amplifier
-```
-
-The estimated values (coils, amplifier input, cable) are in [ENGINE.md](ENGINE.md), and the model itself is
-`tools/clav_net_ref.py`.
+- the oscillator's exact wave shape, and how the control valve's opening curves.
