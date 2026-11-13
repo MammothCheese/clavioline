@@ -435,7 +435,7 @@ static void apply_preset(uint32_t i)
     edited = 0;
 }
 
-/* ---- the screen: 1950s space age (deep-space navy, ivory tablets, a satellite, teal and orange lamps) ------ */
+/* ---- the screen: 1950s space age (deep-space navy, ivory tablets, a satellite; the note in orbit) ---------- */
 #include "title_font.h"                         /* FONT_T, for the titles: rendered from Orbitron (assets/fonts) */
 #define C_NAVY RGB(8, 16, 38)
 #define C_PANEL RGB(18, 40, 62)
@@ -450,6 +450,8 @@ static void apply_preset(uint32_t i)
 #define C_VIOLET RGB(150, 120, 210)
 #define C_STAR RGB(206, 216, 255)
 #define C_AMBER C_ORANGE
+#define C_CORAL RGB(231, 111, 81)
+#define C_PLANET RGB(23, 58, 74)
 
 static void cv_disc(int32_t cx, int32_t cy, int32_t r, uint16_t c)   /* a filled circle */
 {
@@ -534,35 +536,62 @@ static void draw_preset(void)                   /* the preset in a capsule */
     s[i] = 0;
     w = text_w(&FONT_S, s) + 12;
     cv_begin(240, 26, C_NAVY);
-    cv_disc(120 - w / 2, 13, 10, C_PANEL);
-    cv_disc(120 + w / 2, 13, 10, C_PANEL);
-    cv_rect(120 - w / 2, 3, w, 21, C_PANEL);
+    cv_disc(120 - w / 2, 13, 10, C_CORAL);
+    cv_disc(120 + w / 2, 13, 10, C_CORAL);
+    cv_rect(120 - w / 2, 3, w, 21, C_CORAL);
     cv_disc(120 - w / 2 - 16, 13, 2, C_TEAL);
     cv_disc(120 + w / 2 + 16, 13, 2, C_TEAL);
-    cv_text(120 - (w - 12) / 2, 5, &FONT_S, s, C_IVORY);
+    cv_text(120 - (w - 12) / 2, 5, &FONT_S, s, C_NAVY);
     cv_blit(0, 112);
 }
 
-static void draw_note(void)                     /* the note, between two orbit marks */
+static void draw_orbit(uint32_t stops)         /* the note as a planet; the knee lever as an arc and a satellite */
 {
     static const char *const NAME[12] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
-    char s[8] = "-";
-    int32_t w;
+    const int32_t cx = 120, cy = 31, rx = 96, ry = 22;
+    char s[8] = "-", v[6], *q = v;
+    uint32_t k, lev = lever > LEVER_MAX ? LEVER_MAX : lever, pc = (lev * 100u + LEVER_MAX / 2u) / LEVER_MAX;
+    int32_t w, c, sn;
     if (top >= 0) {
         int32_t p = top + 12 * set.coupler, i = 0;
-        const char *q;
+        const char *n;
         if (p < 0) p = 0;
-        for (q = NAME[p % 12]; *q; ) s[i++] = *q++;
+        for (n = NAME[p % 12]; *n; ) s[i++] = *n++;
         if (p >= 12) s[i++] = (char)('0' + p / 12 - 1);
         s[i] = 0;
     }
+    cv_begin(240, 62, C_NAVY);
+    for (k = 0; k < 256u; k++) {                /* the orbit */
+        c = sine((k << 24) + (1u << 30)); sn = sine(k << 24);
+        cv_pset(cx + (c * rx) / 32767, cy + (sn * ry) / 32767, stops ? C_FAINT : C_TEAL);
+    }
+    cv_disc(cx, cy, 20, stops ? C_PANEL : C_MINT);   /* the planet, rimmed */
+    cv_disc(cx, cy, 19, stops ? C_PANEL : C_PLANET);
+    if (!stops) {                               /* the knee lever: from the left, round the front, to the right */
+        for (k = 0; k <= lev * 2u; k++) {
+            uint32_t ph = (uint32_t)(0x80000000u - k * (0x80000000u / (LEVER_MAX * 2u)));
+            c = sine(ph + (1u << 30)); sn = sine(ph);
+            cv_rect(cx + (c * rx) / 32767 - 1, cy + (sn * ry) / 32767 - 1, 3, 3, C_ORANGE);
+        }
+    }
+    if (!stops) {                               /* the satellite, at the end of the arc */
+        uint32_t ph = 0x80000000u - lev * (0x80000000u / LEVER_MAX);
+        int32_t px, py;
+        c = sine(ph + (1u << 30)); sn = sine(ph);
+        px = cx + (c * rx) / 32767; py = cy + (sn * ry) / 32767;
+        cv_line(px - 6, py - 6, px + 6, py + 6, C_CHROME);
+        cv_line(px - 6, py + 6, px + 6, py - 6, C_CHROME);
+        cv_disc(px, py, 3, C_CHROME);
+        cv_rect(px - 3, py, 7, 1, C_TEAL);
+    }
     w = text_w(&FONT_L, s);
-    cv_begin(240, 34, C_NAVY);
-    cv_line(40, 17, 120 - w / 2 - 12, 17, C_FAINT);
-    cv_line(120 + w / 2 + 12, 17, 200, 17, C_FAINT);
-    cv_disc(120 - w / 2 - 12, 17, 2, C_TEAL);
-    cv_disc(120 + w / 2 + 12, 17, 2, C_TEAL);
-    cv_text(120 - w / 2, 1, &FONT_L, s, C_MINT);
+    cv_text(cx - w / 2, cy - 16, &FONT_L, s, stops ? C_FAINT : C_MINT);
+    cv_text(6, 0, &FONT_S, "KNEE", stops ? C_FAINT : C_IVORY);
+    if (pc >= 100u) *q++ = '1';
+    if (pc >= 10u) *q++ = (char)('0' + pc / 10u % 10u);
+    *q++ = (char)('0' + pc % 10u);
+    *q++ = '%'; *q = 0;
+    cv_text(234 - text_w(&FONT_S, v), 0, &FONT_S, v, stops ? C_FAINT : C_ORANGE);
     cv_blit(0, 138);
 }
 
@@ -570,27 +599,14 @@ static void draw_coupler(void)                  /* three lamps */
 {
     static const char *const W[3] = {"LOW", "MED", "HIGH"};
     uint32_t i;
-    cv_begin(240, 22, C_NAVY);
+    cv_begin(240, 18, C_NAVY);
     for (i = 0; i < 3u; i++) {
-        int32_t x = 22 + (int32_t)i * 74, on = (int32_t)i - 1 == set.coupler;
-        cv_disc(x, 11, 6, on ? C_ORANGE : C_PANEL);
-        if (on) { cv_pset(x - 2, 9, C_IVORY); cv_pset(x - 1, 8, C_IVORY); }
-        cv_text(x + 11, 3, &FONT_S, W[i], on ? C_IVORY : C_FAINT);
+        int32_t x = 32 + (int32_t)i * 74, on = (int32_t)i - 1 == set.coupler;
+        cv_disc(x, 9, 5, on ? C_ORANGE : C_PANEL);
+        if (on) { cv_pset(x - 2, 7, C_IVORY); cv_pset(x - 1, 6, C_IVORY); }
+        cv_text(x + 10, 1, &FONT_S, W[i], on ? C_IVORY : C_FAINT);
     }
-    cv_blit(0, 172);
-}
-
-static void draw_lever(void)                    /* the knee lever: a row of lamps, teal, mint, orange */
-{
-    int32_t i, lit = (int32_t)((lever * 20u + LEVER_MAX - 1u) / LEVER_MAX);
-    cv_begin(240, 24, C_NAVY);
-    cv_text(6, 4, &FONT_S, "KNEE", C_IVORY);
-    for (i = 0; i < 20; i++) {
-        uint16_t c = C_PANEL;
-        if (i < lit) c = i < 12 ? C_TEAL : i < 16 ? C_MINT : C_ORANGE;   /* like a period level meter */
-        cv_rect(52 + i * 9, 6, 7, 12, c);
-    }
-    cv_blit(0, 194);
+    cv_blit(0, 200);
 }
 
 static void draw_status(const char *msg, uint16_t colour)
@@ -879,15 +895,16 @@ static void app_main(void)
                         | (uint32_t)set.glide << 12;
             if (st != drawn_opt) { drawn_opt = st; draw_options(osel); }
         } else {
-        if (stops != drawn_stops) { drawn_stops = stops; draw_title(stops); drawn_st = ~0u; }
+        if (stops != drawn_stops) { drawn_stops = stops; draw_title(stops); drawn_st = drawn_note = ~0u; }
         if (set.tabs != drawn_tabs) { drawn_tabs = set.tabs; draw_rail(); }
         if ((set.preset | edited << 15) != drawn_pre) { drawn_pre = set.preset | edited << 15; draw_preset(); }
         if (((uint32_t)(top + 1) | (uint32_t)(set.coupler + 1) << 8) != drawn_note) {
             drawn_note = (uint32_t)(top + 1) | (uint32_t)(set.coupler + 1) << 8;
-            draw_note();
+            drawn_lever = lever;
+            draw_orbit(stops);
         }
         if ((uint32_t)(set.coupler + 1) != drawn_cpl) { drawn_cpl = (uint32_t)(set.coupler + 1); draw_coupler(); }
-        if (lever != drawn_lever) { drawn_lever = lever; draw_lever(); }
+        if (lever != drawn_lever) { drawn_lever = lever; draw_orbit(stops); }
         if (msg && drawn_st != 0xFFFFFFFEu) { drawn_st = 0xFFFFFFFEu; draw_status(msg, C_AMBER); }
         else if (!msg && (stops || cpu_over)) {
             if (drawn_st != 0xFFFFFFFDu) { drawn_st = 0xFFFFFFFDu; draw_status(cpu_txt, cpu_over ? C_AMBER : C_CHROME); }

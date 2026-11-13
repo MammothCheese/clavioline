@@ -32,7 +32,7 @@ silence starts the same way.
 |---|---|---|
 | Keys | Play | The 36-key keyboard, F to E |
 | GLO | STOPS mode: all the tablets, including vibrato, P and the sub-octaves | The tablet rail |
-| **PRESETS** knob | **Knee lever**: the expression swell. Turn quickly for big moves, slowly for small ones. Fully left is silent. MIDI CC 11 moves it too | The lever under the keyboard, pushed with the knee |
+| **PRESETS** knob | **Knee lever**: the expression swell, shown as the orange arc and the satellite on the orbit around the note. Turn quickly for big moves, slowly for small ones. Fully left is silent. MIDI CC 11 moves it too | The lever under the keyboard, pushed with the knee |
 | MASTER | Volume | The amplifier |
 | OCT− / OCT+ | Octave coupler: LOW / MED / HIGH | The transposing slider |
 | ALGORITHM | Shift the FM-1's 27 keys up an octave to reach the top of the 36-key range (back to F3–G5 at power-on) | |
