@@ -12,7 +12,7 @@ else is about shaping that tone:
 - a three-speed **vibrato**;
 - on the **Concert** model, **sub-octaves** that add one or two octaves below the note.
 
-### How faithful it is
+### How it was made
 
 The firmware is built from the original circuit diagrams. The diagrams were traced wire by wire into a computer model of the circuit. That model was then solved on a PC for all 8,192 tablet combinations, and the FM-1 plays back the result: compact filters that reproduce what the circuit does for each combination. The FM-1's small processor could not run the full circuit live, but this way the tablets still interact exactly as the model says.
 
