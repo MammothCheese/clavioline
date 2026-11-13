@@ -12,7 +12,7 @@ else is about shaping that tone:
 - a three-speed **vibrato**;
 - on the **Concert** model, **sub-octaves** that add one or two octaves below the note.
 
-### How it was made
+### How faithful is it?
 
 The firmware is built from the original circuit diagrams. The diagrams were traced wire by wire into a computer model of the circuit. That model was then solved on a PC for all 8,192 tablet combinations, and the FM-1 plays back the result: compact filters that reproduce what the circuit does for each combination. The FM-1's small processor could not run the full circuit live, but this way the tablets still interact exactly as the model says.
 
@@ -27,6 +27,8 @@ Read more about the history of the Clavioline and the process of building this f
 The Clavioline plays **one note at a time**. When you hold several keys, the **highest** one sounds, as on the original.
 Sliding from key to key without letting go changes the pitch without starting a new note. Every new note after
 silence starts the same way.
+
+The GLO buttons toggles STOPS mode, which is where the sound can be edited. These represent the switches on the original Clavioline.
 
 ### PLAY mode
 
