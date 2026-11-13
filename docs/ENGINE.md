@@ -127,8 +127,8 @@ from the lowest note, 87 Hz, up), and C17 is left out while V is up (within 0.07
 | KNEE SPEED | FINE, GENTLE, **NORMAL**, FAST, VERY FAST | Lever steps (of 64) per PRESETS click, turning slowly / medium (<70 ms between clicks) / fast (<30 ms): 1/1/1, 1/1/2, 1/2/4, 2/4/8, 3/6/12 |
 | PORTAMENTO | **OFF**, 15, 30, 60, 120, 250, 500 ms | The oscillator's pitch follows the note with that time constant (an RC-like approach in frequency, updated every 5.8 ms block, before the vibrato). After the idle rest a note starts at its own pitch |
 
-Settings version 9: older settings keep the user slots, tuning and keyboard window; the knee speed goes to NORMAL. Every power-on starts on the CLAVIOLINE TONE
-preset, with the pluck decay and the portamento off.
+Settings version 9: older settings keep the user slots and tuning; the knee speed goes to NORMAL. Every power-on starts on the CLAVIOLINE TONE
+preset with the keys at F3–G5, and the pluck decay and the portamento off.
 
 ## Tests
 

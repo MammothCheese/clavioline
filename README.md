@@ -35,7 +35,7 @@ silence starts the same way.
 | **PRESETS** knob | **Knee lever**: the expression swell. Turn quickly for big moves, slowly for small ones. Fully left is silent. MIDI CC 11 moves it too | The lever under the keyboard, pushed with the knee |
 | MASTER | Volume | The amplifier |
 | OCT− / OCT+ | Octave coupler: LOW / MED / HIGH | The transposing slider |
-| ALGORITHM | Shift the FM-1's 27 keys up an octave to reach the top of the 36-key range | |
+| ALGORITHM | Shift the FM-1's 27 keys up an octave to reach the top of the 36-key range (back to F3–G5 at power-on) | |
 | SELECT | Presets (see below) | The voicing card |
 | SAVE | Store the current tablets and coupler in the user slot shown | |
 | SEQ | Options: pluck decay, knee lever speed, portamento (see below) | |
