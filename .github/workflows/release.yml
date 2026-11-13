@@ -30,15 +30,40 @@ jobs:
       - name: JieLi toolchain (pkgman.jieliapp.com)
         run: sh tools/get_toolchain.sh
 
-      - name: JieLi AC79 SDK (three files of it are placed in the package)
+      # Only three files of JieLi's AC79 SDK go into the package (tools/build.py checks their SHA-256). They are
+      # cached between runs, so gitee.com (slow and flaky from GitHub's machines) is only needed once.
+      - name: JieLi AC79 SDK files (cache)
+        id: sdk-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/fw-AC79_AIoT_SDK/cpu/wl82/tools
+          key: ac79-sdk-AC79NN_SDK_V1.2.1_2023-12-13-v1
+
+      - name: JieLi AC79 SDK files (download)
+        if: steps.sdk-cache.outputs.cache-hit != 'true'
         run: |
-          for i in 1 2 3; do                     # (gitee.com drops a clone now and then: try again)
-            git clone --depth 1 --branch AC79NN_SDK_V1.2.1_2023-12-13 \
-                https://gitee.com/Jieli-Tech/fw-AC79_AIoT_SDK.git ~/fw-AC79_AIoT_SDK && break
-            rm -rf ~/fw-AC79_AIoT_SDK
-            sleep 20
+          TAG=AC79NN_SDK_V1.2.1_2023-12-13
+          DIR=~/fw-AC79_AIoT_SDK/cpu/wl82/tools
+          mkdir -p "$DIR/cfg"
+          ok=1
+          for f in uboot.boot cfg_tool.bin cfg/eq_cfg_hw.bin; do      # the files alone, not the whole SDK
+            curl -fL --retry 6 --retry-delay 15 --retry-all-errors --connect-timeout 30 --max-time 180                 -o "$DIR/$f" "https://gitee.com/Jieli-Tech/fw-AC79_AIoT_SDK/raw/$TAG/cpu/wl82/tools/$f" || ok=0
           done
-          test -d ~/fw-AC79_AIoT_SDK
+          echo "4e3b4c220dc96641cb5a723f41e68ce41d5261ae9434bb33fbd7f2c59976ded4  $DIR/uboot.boot" > sums
+          echo "276579954f076886a6a7694f65dc71c034a63a2c204b76749065c0ac7b010d1b  $DIR/cfg_tool.bin" >> sums
+          echo "41167491bffed4651750719c973d2758adeb9021a5670d02d6a53c85ed80ea7d  $DIR/cfg/eq_cfg_hw.bin" >> sums
+          [ "$ok" = 1 ] && sha256sum -c --quiet sums || ok=0   # (a web page instead of a file counts as a failure)
+          if [ "$ok" != 1 ]; then                # fall back: a shallow clone of that one folder
+            rm -rf ~/sdk-clone
+            for i in 1 2 3; do
+              git clone --depth 1 --filter=blob:none --sparse --branch "$TAG"                   https://gitee.com/Jieli-Tech/fw-AC79_AIoT_SDK.git ~/sdk-clone                 && git -C ~/sdk-clone sparse-checkout set cpu/wl82/tools && break
+              rm -rf ~/sdk-clone
+              sleep 30
+            done
+            cp ~/sdk-clone/cpu/wl82/tools/uboot.boot ~/sdk-clone/cpu/wl82/tools/cfg_tool.bin "$DIR/"
+            cp ~/sdk-clone/cpu/wl82/tools/cfg/eq_cfg_hw.bin "$DIR/cfg/"
+          fi
+          sha256sum -c sums                      # (a failed download never reaches the cache)
 
       - name: Python packages for the tests
         run: python3 -m pip install numpy
