@@ -25,7 +25,7 @@ No Clavioline was available to measure, so everything comes from documents and o
    explains how each part behaves, and gives the tablet settings for 15 instruments.
 2. **Selmer Electronics, "Tone Generator — Concert Clavioline", drawing DRG 1289.** A faint factory drawing of the
    Concert model. It shows the same oscillator and tone network as the 1952 article, plus the sub-octave circuit and a
-   few component values the article leaves out. It gives no coil values.
+   few component values the article leaves out.
 3. **C. Martin, US patent 2,563,477 (filed 1948).** The inventor's own description of the principle. The production
    instrument differs in detail, so the patent was used to confirm what the circuit was meant to do, never for values.
 4. **Gordon Reid, "The Story Of The Clavioline", *Sound On Sound*, March 2007.** A history by the owner of a Selmer
@@ -34,8 +34,7 @@ No Clavioline was available to measure, so everything comes from documents and o
 5. **A 1953 Gibson Clavioline restoration (antiqueradio.org).** Practical details from someone who had one apart: the
    resistor chain behind the keys, the two key contacts, the knee lever's construction.
 6. **Vintage Keys Studio, ["The Joe Meek Telstar Keyboard: The Clavioline"](https://www.youtube.com/watch?v=JK0m1moewgA)
-   (YouTube).** A working Clavioline demonstrated note by note. It is the only real sound this project could measure:
-   the plain tone with no tablets (about 1:52), a sustained note (about 1:44) and tablet P (about 1:58).
+   (YouTube).** A working Clavioline demonstrated note by note.
 
 ## How the original works
 
@@ -43,16 +42,11 @@ No Clavioline was available to measure, so everything comes from documents and o
 
 Behind the keys is a chain of precision resistors. Pressing a key connects one point on that chain to the oscillator,
 which sets its pitch. The point nearest the oscillator cuts off everything beyond it, so when several keys are held,
-**the highest one always sounds**. The article says so explicitly.
+**the highest one always sounds**.
 
 Each key has **two contacts**. The first starts the oscillator. The second, a moment later, opens a **control valve**
 that lets the sound through, so notes start cleanly without a click. All the keys share that second contact, so
 sliding from one held key to the next changes the pitch without starting a new note.
-
-How quickly the control valve opens is set by a small resistor–capacitor network, and the article prints its values.
-From them the attack works out at about 19 ms normally and about 1.5 ms with tablet **P**. That is all P does
-according to the article: it shortens the attack, "so that a definite transient appears at the commencement of each
-note".
 
 The oscillator's output is described as "trapezoidal in form": roughly a square wave with sloping edges. That is the
 bright, buzzy raw tone that everything else shapes.
@@ -85,13 +79,11 @@ Because it is one connected circuit, the tablets **interact**. A few examples:
 This matches the patent: Martin's coils sit in series between the valve and the amplifier, with capacitors switched
 onto their ends and their middle.
 
-A full list of the traced connections is at the end of this page.
-
 ### The amplifier and speaker
 
 The amplifier was "designed to introduce a controlled amount of harmonic distortion", and the service manual says "a
 large amount of distortion is deliberately obtained". The speaker, too, was chosen to "add its measure". No values are
-printed for either, so both are estimates. The distortion comes after the knee lever, so playing louder adds more of it.
+printed for either, so both are estimates.
 
 ## Judgement calls
 
@@ -131,21 +123,8 @@ its value.
 ### First attempt: simulating the circuit
 
 The first versions ran the whole tone network on the FM-1 as a live circuit simulation, every component, every sample.
-That proved the reading of the circuit was right: the tablets interacted as the drawing says. But it used most of the
-FM-1's small processor, so the device buzzed when it ran out of time, and it still did not sound convincing.
-
-### Finding what was missing
-
-A careful audit against the article showed that the problems were around the network, not in it:
-- **The wave shape.** A perfectly symmetrical trapezoid has only odd harmonics. A valve oscillator of this kind is
-  lopsided, with one sharp edge and one that recovers more slowly, which adds the even harmonics that make the tone
-  reedy.
-- **The amplifier and speaker.** The documents stress deliberate distortion and a speaker that colours the sound. The
-  firmware had almost no distortion and no speaker at all.
-- **The coils' losses.** With the coils estimated as quite lossy, several tablets barely changed anything. Values
-  usual for iron-core audio coils of the time make each tablet distinct.
-- **Tablet P.** An earlier version had invented a "ping" and an automatic fade for P. Both were removed, because the
-  article describes P only as a shorter attack.
+That proved the reading of the circuit was right: the tablets interacted as the drawing says, but it used most of the
+FM-1's small processor.
 
 ### Making it fit
 
@@ -153,10 +132,6 @@ Instead of simulating the network live, it is now solved in advance on a PC, fro
 combinations of the 13 tone tablets. Each result is stored as a set of five compact filters. The FM-1 just loads the
 filters for whichever tablets are down. The tablets still interact exactly as the model says, at a small fraction of
 the processing cost.
-
-The firmware also runs on a PC, where scripted performances are recorded and checked automatically: tuning, vibrato
-speeds, attack times, and the FM-1's filters against the circuit model. Every change has to pass before it goes to the
-keyboard.
 
 ## Listening against a real Clavioline
 
