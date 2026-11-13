@@ -162,9 +162,9 @@ phrase on six presets: `tests/run_host.sh tests/scripts/demo.txt` writes it to `
 
 ### CPU load
 
-The audio interrupt times itself against the 5.8 ms it has for each 256-sample block. STOPS mode shows the load on the
-bottom line (`CPU nn%  PEAK nn%`, including the platform's own interrupts that land inside a render); if the peak passes
-90 %, PLAY mode shows `AUDIO OVERLOAD`. Per output sample the engine does roughly 40 multiplies (half of the
+The audio interrupt times itself against the 5.8 ms it has for each 256-sample block (including the platform's own
+interrupts that land inside a render); if the peak passes 90 %, PLAY mode shows `AUDIO OVERLOAD` with the load on the
+bottom line. Per output sample the engine does roughly 40 multiplies (half of the
 instrument's work at 22.05 kHz, the amplifier and speaker at 44.1 kHz), against about 150 when it simulated the
 network.
 
