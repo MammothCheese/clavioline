@@ -436,6 +436,7 @@ static void apply_preset(uint32_t i)
 }
 
 /* ---- the screen: 1950s space age (deep-space navy, ivory tablets, a satellite, teal and orange lamps) ------ */
+#include "title_font.h"                         /* FONT_T, for the titles: rendered from Orbitron (assets/fonts) */
 #define C_NAVY RGB(8, 16, 38)
 #define C_PANEL RGB(18, 40, 62)
 #define C_CHROME RGB(150, 172, 190)
@@ -480,7 +481,7 @@ static void draw_title_text(const char *t, uint16_t colour)   /* stars, the titl
 {
     static const uint8_t STARS[][2] = {{6, 6}, {30, 30}, {52, 4}, {74, 33}, {98, 2}, {121, 35}, {145, 5}, {168, 31},
                                        {190, 3}, {212, 28}, {234, 9}, {14, 22}, {226, 34}, {110, 18}};
-    int32_t i, tw = text_w(&FONT_L, t), x = (240 - tw) / 2 + 10;
+    int32_t i, tw = text_w(&FONT_T, t), x = (240 - tw) / 2 + 10;
     cv_begin(240, 40, C_NAVY);
     for (i = 0; i < (int32_t)(sizeof STARS / sizeof STARS[0]); i++) {
         cv_pset(STARS[i][0], STARS[i][1], C_STAR);
@@ -494,7 +495,7 @@ static void draw_title_text(const char *t, uint16_t colour)   /* stars, the titl
         cv_rect(sx - 6, sy - 1, 13, 2, C_TEAL);
         cv_pset(sx - 2, sy - 3, C_IVORY);
     }
-    cv_text(x, 3, &FONT_L, t, colour);
+    cv_text(x, 5, &FONT_T, t, colour);
     cv_line(x, 37, x + tw, 37, C_TEAL);
     cv_rect(x + tw + 3, 36, 3, 3, C_ORANGE);
     cv_blit(0, 0);
