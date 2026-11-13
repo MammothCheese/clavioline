@@ -5,8 +5,7 @@
 Custom firmware that turns the FM-1 into a **Clavioline**, the valve keyboard Constant Martin invented in 1947 and
 Selmer built in England in the 1950s. It is the reedy, vibrato-laden lead voice of records like "Telstar".
 
-The Clavioline was a small box that clipped under a piano keyboard, with its own amplifier and speaker in a separate
-cabinet. It plays one note at a time. Inside, a valve oscillator makes a single bright, buzzy tone, and everything
+The Clavioline plays one note at a time. Inside, a valve oscillator makes a single bright, buzzy tone, and everything
 else is about shaping that tone:
 - a row of **tablets** (stop switches) along the front changes the tone colour;
 - a **knee lever** under the keyboard swells the volume, played with the knee while both hands are on the keys;
