@@ -17,7 +17,7 @@ else is about shaping that tone:
 
 The firmware is built from the original circuit diagrams. The diagrams were traced wire by wire into a computer model of the circuit. That model was then solved on a PC for all 8,192 tablet combinations, and the FM-1 plays back the result: compact filters that reproduce what the circuit does for each combination. The FM-1's small processor could not run the full circuit live, but this way the tablets still interact exactly as the model says.
 
-Some parts of the original are not in any surviving document: the coils' values, the oscillator's exact wave shape,
+Some parts of the original are not in any known surviving document: the coils' values, the oscillator's exact wave shape,
 the amount of amplifier distortion and the speaker's sound. Those are estimates, refined by comparing the firmware
 against a recording of a real Clavioline.
 
