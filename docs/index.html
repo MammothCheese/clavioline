@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CLAVIOLINE for the M-VAVE FM-1</title>
-<meta name="description" content="Custom firmware that turns the M-VAVE FM-1 into the 1950s Clavioline, rebuilt from the original circuit diagrams.">
+<meta name="description" content="Custom firmware that turns the M-VAVE FM-1 into the 1947 Clavioline, rebuilt from the original circuit diagrams.">
 <link rel="icon" href="site/play.png">
 <style>
 @font-face { font-family: "Orbitron"; src: url("site/Orbitron.ttf") format("truetype"); font-display: swap; }
@@ -86,9 +86,9 @@ footer a { color: var(--chrome); }
   <div>
     <div class="kicker">CUSTOM FIRMWARE FOR THE M-VAVE FM-1 · FREE AND OPEN SOURCE</div>
     <h1>The 1950s valve keyboard behind <em>"Telstar"</em>, in your pocket.</h1>
-    <p class="lede">CLAVIOLINE turns the FM-1 into the Selmer Clavioline, rebuilt from the original 1952 circuit diagrams: 13 tone tablets that interact like the real coil network, a percussive P attack, three-speed vibrato, the Concert model's sub-octaves and a knee lever for swells.</p>
+    <p class="lede">CLAVIOLINE turns the FM-1 into the Clavioline, an early synthesizer, rebuilt from original 1952 circuit diagrams. 13 tone tablets interact like the real coil network. A percussive P attack, three-speed vibrato and the Concert model's sub-octaves modify the sound further.</p>
     <a class="btn primary" href="https://github.com/MammothCheese/clavioline/releases/latest">Download the firmware</a>
-    <a class="btn ghost" href="https://thefirmwarehub.com">Install with the Firmware Hub</a>
+    <a class="btn ghost" href="https://thefirmwarehub.com/firmware/clavioline/">Install with the Firmware Hub</a>
   </div>
   <div class="screen"><img src="site/play.png" alt="The Clavioline screen on the FM-1: the tablets, the preset, the note in orbit and the knee lever"><p>The FM-1's screen, rendered by the firmware</p></div>
 </div>
@@ -97,21 +97,21 @@ footer a { color: var(--chrome); }
   <h2>Controls</h2>
   <p class="sub">The Clavioline plays one note at a time. Hold several keys and the highest sounds; slide between held keys and the note changes without a new attack.</p>
   <div class="grid">
-    <div class="card"><h3>KEYS</h3><p>Play. MIDI notes in, over USB or the TRS jack, play too.</p><div class="orig">Original: the 36-key keyboard, F to E</div></div>
-    <div class="card"><h3>GLO</h3><p>STOPS mode: the keys become the tablets. GLO or HOME goes back.</p><div class="orig">Original: the tablet rail</div></div>
-    <div class="card"><h3>PRESETS knob</h3><p>The knee lever: the expression swell. Pushing it drives the valve amplifier harder. MIDI CC 11 moves it too.</p><div class="orig">Original: the lever under the keyboard, pushed with the knee</div></div>
-    <div class="card"><h3>SELECT</h3><p>43 voicings, A to Z, then 4 user slots. It always starts on Clavioline Tone.</p><div class="orig">Original: the voicing card</div></div>
-    <div class="card"><h3>OCT− / OCT+</h3><p>The coupler: LOW, MED or HIGH.</p><div class="orig">Original: the transposing slider</div></div>
+    <div class="card"><h3>KEYS</h3><p>Play. MIDI notes in, over USB or the TRS jack, play too.</p></div>
+    <div class="card"><h3>GLO</h3><p>STOPS mode: the keys become the tablets to modify the sound. GLO or HOME goes back.</p></div>
+    <div class="card"><h3>PRESETS knob</h3><p>The knee lever: the expression swell. Pushing it drives the valve amplifier harder. MIDI CC 11 moves it too.</p></div>
+    <div class="card"><h3>SELECT knob</h3><p>43 voicings, drawn from historical lists, then 4 user slots.</p></div>
+    <div class="card"><h3>OCT− / OCT+</h3><p>The coupler: LOW, MED or HIGH.</p></div>
     <div class="card"><h3>MASTER</h3><p>Volume.</p></div>
     <div class="card"><h3>ALGORITHM</h3><p>Shift the 27 keys up an octave to reach the top of the original's 36.</p></div>
     <div class="card"><h3>SAVE</h3><p>Store the tablets and coupler in the user slot shown.</p></div>
-    <div class="card"><h3>SEQ</h3><p>Options the original didn't have: pluck decay, knee lever speed, portamento.</p></div>
-    <div class="card"><h3>KNOB 1</h3><p>Fine tuning, ±50 cents.</p><div class="orig">Original: the tuning control</div></div>
+    <div class="card"><h3>SEQ</h3><p>Options the original didn't have, to help recreate an authentic sound: pluck decay, knee lever speed, portamento.</p></div>
+    <div class="card"><h3>KNOB 1</h3><p>Fine tuning.</p></div>
   </div>
 </section>
 
 <section id="stops">
-  <h2>The stops</h2>
+  <h2>The stops - press GLO</h2>
   <p class="sub">Most tablets switch capacitors and resistors into one shared network of coils, so they don't simply add up: each changes what the others do. That's how a short row of switches imitated violins, oboes and organs.</p>
   <div class="stops">
     <div>
@@ -139,21 +139,12 @@ footer a { color: var(--chrome); }
 </section>
 
 <section id="presets">
-  <h2>Presets</h2>
-  <p class="sub">Every clip is played by the firmware itself (levels evened out for browsing). Voicings come from the 1952 <i>Electronic Engineering</i> table and Selmer's own cards; three are new.</p>
+  <h2>Preset sounds</h2>
+  <p class="sub">Voicings come from a 1952 <i>Electronic Engineering</i> table and Selmer's instrument cards (and three brand new sounds).</p>
   <div class="filters" id="filters"></div>
   <div class="grid" id="list"></div>
 </section>
 
-<section id="install">
-  <h2>Install</h2>
-  <div class="steps">
-    <div class="card"><h3>Download</h3><p>Get <code>clavioline.fwsc</code> from the <a href="https://github.com/MammothCheese/clavioline/releases/latest">latest release</a>.</p></div>
-    <div class="card"><h3>Flash</h3><p>Open the <a href="https://thefirmwarehub.com">FM-1 Firmware Hub</a> in Chrome or Edge, plug the FM-1 in over USB and install.</p></div>
-    <div class="card"><h3>Check</h3><p>At power-on the screen shows <code>BUILD</code> and the commit it came from. If anything goes wrong, hold OCT− while switching on for the USB rescue.</p></div>
-  </div>
-  <p class="sub" style="margin-top:18px">Installing firmware is at your own risk; keep a backup of your FM-1. The Firmware Hub can always take you back to the official firmware.</p>
-</section>
 </main>
 
 <footer><div class="wrap">
