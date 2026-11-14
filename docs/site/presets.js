@@ -69,7 +69,7 @@ const PRESETS = [
    "4",
    "P"
   ],
-  "source": "new, not historical",
+  "source": "new",
   "new": true,
   "family": "Plucked"
  },
@@ -477,7 +477,7 @@ const PRESETS = [
    "5",
    "O"
   ],
-  "source": "new, not historical",
+  "source": "new",
   "new": true,
   "family": "Other"
  },
@@ -517,7 +517,7 @@ const PRESETS = [
    "3",
    "V"
   ],
-  "source": "new, not historical",
+  "source": "new",
   "new": true,
   "family": "Brass"
  },
