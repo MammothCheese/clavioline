@@ -52,7 +52,7 @@ section { padding: 44px 0; border-top: 1px solid var(--panel); }
 .chip { display: inline-block; min-width: 22px; text-align: center; background: var(--ivory); color: var(--ink); font: 13px/1.5 var(--mono);
   padding: 0 5px; margin: 0 3px 4px 0; border-top: 3px solid var(--red); border-radius: 2px; }
 .chip.vib { border-top-color: var(--teal); } .chip.sub { border-top-color: var(--violet); } .chip.p { border-top-color: var(--orange); }
-.stops { display: grid; grid-template-columns: 1fr; gap: 30px; align-items: start; }
+.stops { display: grid; grid-template-columns: minmax(0, 1fr); gap: 30px; align-items: start; }
 .stops img { width: 100%; image-rendering: pixelated; border: 8px solid var(--panel); border-radius: 8px; }
 table.tabs { border-collapse: collapse; width: 100%; font-size: 14.5px; }
 table.tabs td { padding: 7px 8px; border-bottom: 1px solid var(--panel); vertical-align: top; }
@@ -154,10 +154,10 @@ Built from G. H. Hillier, "The Clavioline", <i>Electronic Engineering</i>, Octob
 <script src="site/presets.js"></script>
 <script>
 const CLASS = c => ["III", "II", "I", "+"].includes(c) ? "vib" : c.startsWith("I") && c.length > 1 && /[pf]$/.test(c) ? "sub" : c === "P" ? "p" : "";
-const FAMILIES = ["All", "Reeds and winds", "Brass", "Strings", "Plucked", "Organs", "New"];
+const FAMILIES = ["All", "Reeds and winds", "Brass", "Strings", "Plucked", "Organs", "Other"];
 const list = document.getElementById("list"), filters = document.getElementById("filters");
 const audio = new Audio();
-let playing = null, current = "Reeds and winds";
+let playing = null, current = "Other";
 function render() {
   list.innerHTML = "";
   PRESETS.filter(p => current === "All" || (current === "New" ? p.new : p.family === current)).forEach(p => {
