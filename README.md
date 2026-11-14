@@ -134,6 +134,8 @@ Installing firmware is at your own risk; keep a backup of your FM-1.
 
 ## Documentation
 
+- [The cheat sheet](https://mammothcheese.github.io/clavioline/): controls, stops and every preset with a sound clip
+  played by the firmware (the page is `docs/index.html`).
 - [docs/HISTORY.md](docs/HISTORY.md): the instrument, the sources, how the circuit was read and the firmware made, and
   the open questions.
 - [docs/ENGINE.md](docs/ENGINE.md): how the sound engine works, every parameter and estimate, the tests, and building

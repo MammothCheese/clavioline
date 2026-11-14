@@ -198,6 +198,7 @@ The build refuses code the FM-1 cannot run: floating point, 64-bit division, cal
 | `tools/clav_wave.py` | The oscillator's wave shape |
 | `tools/gen_clav_tables.py` | Writes `clav_tables.h` |
 | `tools/plot_net.py` | Plots network responses |
+| `tools/gen_site.py` | Makes the cheat-sheet page's data in `docs/site/`: a clip of every preset played by the host build, the preset list from `clavioline.c`, the screens. Run it again after changing presets or the sound |
 | `tools/gen_font.py` | Renders a TrueType font into the firmware's bitmap format; makes `firmware/gen/title_font.h` (the titles, from `assets/fonts/Orbitron.ttf`) |
 | `tests/` | Host scripts and checks |
 | everything else | The FM-1 platform (Dinghy): USB, updates, rescue, MIDI, screen, keys, flash |

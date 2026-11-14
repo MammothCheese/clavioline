@@ -22,7 +22,7 @@ contributors are listed below.
 | What | Licence | Where |
 | --- | --- | --- |
 | Terminus font 8x16 (ter-u16n), rendered into `firmware/gen/felucca_font.h` | SIL OFL 1.1 | `assets/fonts/Terminus-LICENSE.txt` |
-| Orbitron font (The Orbitron Project Authors), `assets/fonts/Orbitron.ttf`, rendered into `firmware/gen/title_font.h` for the screen titles | SIL OFL 1.1 | `assets/fonts/Orbitron-LICENSE.txt` |
+| Orbitron font (The Orbitron Project Authors), `assets/fonts/Orbitron.ttf`, rendered into `firmware/gen/title_font.h` for the screen titles; a copy in `docs/site/` for the cheat-sheet page | SIL OFL 1.1 | `assets/fonts/Orbitron-LICENSE.txt` |
 | JieLi AC79 SDK: `uboot.boot`, `cfg_tool.bin`, `eq_cfg_hw.bin` are read from your SDK checkout at build time and placed in the package; no SDK files are in this tree | Apache-2.0 | <https://gitee.com/Jieli-Tech/fw-AC79_AIoT_SDK> |
 
 ## Trademarks

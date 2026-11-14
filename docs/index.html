@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CLAVIOLINE for the M-VAVE FM-1</title>
+<meta name="description" content="Custom firmware that turns the M-VAVE FM-1 into the 1950s Clavioline, rebuilt from the original circuit diagrams.">
+<link rel="icon" href="site/play.png">
+<style>
+@font-face { font-family: "Orbitron"; src: url("site/Orbitron.ttf") format("truetype"); font-display: swap; }
+:root {
+  --navy: #081026; --panel: #12283E; --panel2: #0d1d33; --chrome: #96ACBE; --ivory: #EEE6CE; --ink: #1C1816;
+  --orange: #FF8E24; --teal: #38C4BA; --mint: #A0F4DE; --faint: #3A5068; --red: #D64034; --violet: #9678D2;
+  --coral: #E76F51;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--navy); color: var(--ivory); font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; }
+body::before { content: ""; position: fixed; inset: 0; pointer-events: none; opacity: .5;
+  background-image: radial-gradient(1px 1px at 12% 18%, #CED8FF 50%, transparent 51%), radial-gradient(1px 1px at 68% 8%, #CED8FF 50%, transparent 51%),
+  radial-gradient(1px 1px at 84% 42%, #CED8FF 50%, transparent 51%), radial-gradient(1px 1px at 30% 62%, #CED8FF 50%, transparent 51%),
+  radial-gradient(1px 1px at 52% 88%, #CED8FF 50%, transparent 51%), radial-gradient(1px 1px at 92% 78%, #CED8FF 50%, transparent 51%); }
+a { color: var(--teal); }
+.wrap { max-width: 1080px; margin: 0 auto; padding: 0 20px; position: relative; }
+nav { position: sticky; top: 0; z-index: 5; background: rgba(8, 16, 38, .92); border-bottom: 1px solid var(--panel); }
+nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 52px; }
+.brand { font-family: Orbitron, var(--mono); letter-spacing: 3px; color: var(--ivory); text-decoration: none; font-size: 15px; }
+.brand::before { content: "●"; color: var(--chrome); margin-right: 8px; }
+nav ul { display: flex; gap: 18px; list-style: none; margin: 0; padding: 0; }
+nav ul a { color: var(--chrome); text-decoration: none; font-size: 14px; }
+nav ul a:hover { color: var(--mint); }
+.hero { display: grid; grid-template-columns: 1.25fr 1fr; gap: 40px; align-items: center; padding: 56px 0 40px; }
+.kicker { color: var(--teal); font: 12px var(--mono); letter-spacing: 2px; }
+h1 { font-family: Orbitron, sans-serif; font-weight: 500; font-size: clamp(28px, 4vw, 42px); line-height: 1.15; margin: 10px 0 16px; letter-spacing: 1px; }
+h1 em { font-style: normal; color: var(--orange); }
+h2 { font-family: Orbitron, sans-serif; font-weight: 500; font-size: 24px; letter-spacing: 1px; margin: 0 0 6px; }
+.lede { color: var(--chrome); font-size: 17px; margin: 0 0 22px; }
+.btn { display: inline-block; padding: 10px 18px; border-radius: 8px; text-decoration: none; font-size: 15px; margin: 0 10px 10px 0; }
+.btn.primary { background: var(--orange); color: var(--navy); font-weight: 600; }
+.btn.ghost { border: 1px solid var(--teal); color: var(--teal); }
+.screen { text-align: center; }
+.screen img { width: min(100%, 360px); image-rendering: pixelated; border: 10px solid var(--panel); border-radius: 10px; box-shadow: 0 0 0 1px var(--faint); }
+.screen p { color: var(--faint); font-size: 13px; margin: 8px 0 0; }
+section { padding: 44px 0; border-top: 1px solid var(--panel); }
+.sub { color: var(--chrome); margin: 0 0 22px; max-width: 760px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+.card { background: var(--panel); border-radius: 10px; padding: 14px 16px; }
+.card h3 { margin: 0 0 4px; font: 500 15px var(--mono); color: var(--orange); letter-spacing: 1px; }
+.card p { margin: 0; color: var(--ivory); font-size: 14.5px; }
+.card .orig { color: var(--chrome); font-size: 13px; margin-top: 6px; }
+.chip { display: inline-block; min-width: 22px; text-align: center; background: var(--ivory); color: var(--ink); font: 13px/1.5 var(--mono);
+  padding: 0 5px; margin: 0 3px 4px 0; border-top: 3px solid var(--red); border-radius: 2px; }
+.chip.vib { border-top-color: var(--teal); } .chip.sub { border-top-color: var(--violet); } .chip.p { border-top-color: var(--orange); }
+.stops { display: grid; grid-template-columns: 1fr 300px; gap: 30px; align-items: start; }
+.stops img { width: 100%; image-rendering: pixelated; border: 8px solid var(--panel); border-radius: 8px; }
+table.tabs { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+table.tabs td { padding: 7px 8px; border-bottom: 1px solid var(--panel); vertical-align: top; }
+table.tabs td:first-child { white-space: nowrap; width: 1%; }
+table.tabs td:last-child { color: var(--chrome); }
+.keys { font: 13px/1.5 var(--mono); color: var(--chrome); background: var(--panel2); border-radius: 8px; padding: 12px 14px; overflow-x: auto; white-space: pre; margin-top: 16px; }
+.filters { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 16px; }
+.filters button { background: none; border: 1px solid var(--faint); color: var(--chrome); border-radius: 18px; padding: 5px 13px; font-size: 14px; cursor: pointer; }
+.filters button.on { background: var(--teal); border-color: var(--teal); color: var(--navy); }
+.preset { background: var(--panel); border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+.preset .top { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.preset b { font-weight: 600; font-size: 15px; }
+.play { flex: none; width: 34px; height: 34px; border-radius: 50%; border: none; background: var(--orange); color: var(--navy); cursor: pointer; font-size: 13px; }
+.play.on { background: var(--mint); }
+.meta { color: var(--chrome); font-size: 12.5px; }
+.meta .new { color: var(--orange); }
+.steps { counter-reset: s; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.steps .card { counter-increment: s; }
+.steps .card h3::before { content: counter(s) " "; color: var(--mint); }
+footer { color: var(--faint); font-size: 13px; padding: 30px 0 50px; border-top: 1px solid var(--panel); }
+footer a { color: var(--chrome); }
+@media (max-width: 760px) { .hero, .stops { grid-template-columns: 1fr; } nav ul { display: none; } .hero { padding-top: 30px; } }
+</style>
+</head>
+<body>
+<nav><div class="wrap"><a class="brand" href="#top">CLAVIOLINE</a>
+<ul><li><a href="#controls">Controls</a></li><li><a href="#stops">Stops</a></li><li><a href="#presets">Presets</a></li><li><a href="#install">Install</a></li><li><a href="https://github.com/MammothCheese/clavioline">GitHub</a></li></ul></div></nav>
+
+<main class="wrap" id="top">
+<div class="hero">
+  <div>
+    <div class="kicker">CUSTOM FIRMWARE FOR THE M-VAVE FM-1 · FREE AND OPEN SOURCE</div>
+    <h1>The 1950s valve keyboard behind <em>"Telstar"</em>, in your pocket.</h1>
+    <p class="lede">CLAVIOLINE turns the FM-1 into the Selmer Clavioline, rebuilt from the original 1952 circuit diagrams: 13 tone tablets that interact like the real coil network, a percussive P attack, three-speed vibrato, the Concert model's sub-octaves and a knee lever for swells.</p>
+    <a class="btn primary" href="https://github.com/MammothCheese/clavioline/releases/latest">Download the firmware</a>
+    <a class="btn ghost" href="https://thefirmwarehub.com">Install with the Firmware Hub</a>
+  </div>
+  <div class="screen"><img src="site/play.png" alt="The Clavioline screen on the FM-1: the tablets, the preset, the note in orbit and the knee lever"><p>The FM-1's screen, rendered by the firmware</p></div>
+</div>
+
+<section id="controls">
+  <h2>Controls</h2>
+  <p class="sub">The Clavioline plays one note at a time. Hold several keys and the highest sounds; slide between held keys and the note changes without a new attack.</p>
+  <div class="grid">
+    <div class="card"><h3>KEYS</h3><p>Play. MIDI notes in, over USB or the TRS jack, play too.</p><div class="orig">Original: the 36-key keyboard, F to E</div></div>
+    <div class="card"><h3>GLO</h3><p>STOPS mode: the keys become the tablets. GLO or HOME goes back.</p><div class="orig">Original: the tablet rail</div></div>
+    <div class="card"><h3>PRESETS knob</h3><p>The knee lever: the expression swell. Pushing it drives the valve amplifier harder. MIDI CC 11 moves it too.</p><div class="orig">Original: the lever under the keyboard, pushed with the knee</div></div>
+    <div class="card"><h3>SELECT</h3><p>43 voicings, A to Z, then 4 user slots. It always starts on Clavioline Tone.</p><div class="orig">Original: the voicing card</div></div>
+    <div class="card"><h3>OCT− / OCT+</h3><p>The coupler: LOW, MED or HIGH.</p><div class="orig">Original: the transposing slider</div></div>
+    <div class="card"><h3>MASTER</h3><p>Volume.</p></div>
+    <div class="card"><h3>ALGORITHM</h3><p>Shift the 27 keys up an octave to reach the top of the original's 36.</p></div>
+    <div class="card"><h3>SAVE</h3><p>Store the tablets and coupler in the user slot shown.</p></div>
+    <div class="card"><h3>SEQ</h3><p>Options the original didn't have: pluck decay, knee lever speed, portamento.</p></div>
+    <div class="card"><h3>KNOB 1</h3><p>Fine tuning, ±50 cents.</p><div class="orig">Original: the tuning control</div></div>
+  </div>
+</section>
+
+<section id="stops">
+  <h2>The stops</h2>
+  <p class="sub">Most tablets switch capacitors and resistors into one shared network of coils, so they don't simply add up: each changes what the others do. That's how a short row of switches imitated violins, oboes and organs.</p>
+  <div class="stops">
+    <div>
+      <table class="tabs">
+        <tr><td><span class="chip vib">III</span><span class="chip vib">II</span><span class="chip vib">I</span></td><td>Vibrato speed, fast to slow (6.5, 5.5, 4.5 Hz)</td></tr>
+        <tr><td><span class="chip vib">+</span></td><td>Vibrato depth: deep instead of shallow</td></tr>
+        <tr><td><span class="chip sub">Ip</span><span class="chip sub">IIp</span></td><td>One and two octaves below, soft (Concert model)</td></tr>
+        <tr><td><span class="chip sub">If</span><span class="chip sub">IIf</span></td><td>One and two octaves below, loud</td></tr>
+        <tr><td><span class="chip">1</span>–<span class="chip">9</span></td><td>Resonances that combine: 1 and 2 strong formants, 3 and 4 softer, 5 and 6 colour with others, 7 to 9 brighter</td></tr>
+        <tr><td><span class="chip">O</span></td><td>Smooth: damps the resonances</td></tr>
+        <tr><td><span class="chip">A</span></td><td>Vocal: a forward mid-range</td></tr>
+        <tr><td><span class="chip">B</span></td><td>Reedy: thin, the bass cut away</td></tr>
+        <tr><td><span class="chip">V</span></td><td>Veiled: darker upper harmonics</td></tr>
+        <tr><td><span class="chip p">P</span></td><td>Pluck: each note starts with a sharp peak, matched to a recording of a real Clavioline</td></tr>
+      </table>
+      <div class="keys">In STOPS mode (GLO):
+ black keys    F#3  G#3  A#3   C#4                    A#4  C#5  D#5  F#5
+               III  II   I     +                      Ip   IIp  If   IIf
+ white keys  F3 G3 A3 B3 C4 D4 E4 F4 G4 A4 B4 C5 D5 E5
+             1  2  3  4  5  6  7  8  9  O  A  B  V  P
+ FX SEL ENV LFO EDIT play C4 D4 E4 F4 G4 · PLAY holds a drone</div>
+    </div>
+    <div><img src="site/stops.png" alt="STOPS mode on the FM-1: the tablets, with a guide to them in the lower half of the screen"></div>
+  </div>
+</section>
+
+<section id="presets">
+  <h2>Presets</h2>
+  <p class="sub">Every clip is played by the firmware itself (levels evened out for browsing). Voicings come from the 1952 <i>Electronic Engineering</i> table and Selmer's own cards; three are new.</p>
+  <div class="filters" id="filters"></div>
+  <div class="grid" id="list"></div>
+</section>
+
+<section id="install">
+  <h2>Install</h2>
+  <div class="steps">
+    <div class="card"><h3>Download</h3><p>Get <code>clavioline.fwsc</code> from the <a href="https://github.com/MammothCheese/clavioline/releases/latest">latest release</a>.</p></div>
+    <div class="card"><h3>Flash</h3><p>Open the <a href="https://thefirmwarehub.com">FM-1 Firmware Hub</a> in Chrome or Edge, plug the FM-1 in over USB and install.</p></div>
+    <div class="card"><h3>Check</h3><p>At power-on the screen shows <code>BUILD</code> and the commit it came from. If anything goes wrong, hold OCT− while switching on for the USB rescue.</p></div>
+  </div>
+  <p class="sub" style="margin-top:18px">Installing firmware is at your own risk; keep a backup of your FM-1. The Firmware Hub can always take you back to the official firmware.</p>
+</section>
+</main>
+
+<footer><div class="wrap">
+Built from G. H. Hillier, "The Clavioline", <i>Electronic Engineering</i>, October 1952, and the Selmer Concert drawings. <a href="https://github.com/MammothCheese/clavioline/blob/main/docs/HISTORY.md">How it was made</a> · <a href="https://github.com/MammothCheese/clavioline">Source</a> (GPL-3.0) · on the <a href="https://github.com/zvenson/dinghy">Dinghy</a> platform.<br>
+"Clavioline" was a name used by Constant Martin and Selmer. "M-VAVE" and "FM-1" belong to their owners. Not made or endorsed by any of them.
+</div></footer>
+
+<script src="site/presets.js"></script>
+<script>
+const CLASS = c => ["III", "II", "I", "+"].includes(c) ? "vib" : c.startsWith("I") && c.length > 1 && /[pf]$/.test(c) ? "sub" : c === "P" ? "p" : "";
+const FAMILIES = ["All", "Reeds and winds", "Brass", "Strings", "Plucked", "Organs", "New"];
+const list = document.getElementById("list"), filters = document.getElementById("filters");
+const audio = new Audio();
+let playing = null, current = "All";
+function render() {
+  list.innerHTML = "";
+  PRESETS.filter(p => current === "All" || (current === "New" ? p.new : p.family === current)).forEach(p => {
+    const el = document.createElement("div");
+    el.className = "preset";
+    el.innerHTML = `<div class="top"><b>${p.name}</b><button class="play" aria-label="Play ${p.name}">▶</button></div>
+      <div>${p.chips.map(c => `<span class="chip ${CLASS(c)}">${c}</span>`).join("")}</div>
+      <div class="meta">${p.coupler} · <span class="${p.new ? "new" : ""}">${p.source}</span>${p.key === "CLAVIOLINE TONE" ? " · power-on" : ""}</div>`;
+    const b = el.querySelector(".play");
+    b.onclick = () => {
+      if (playing === b) { audio.pause(); b.classList.remove("on"); b.textContent = "▶"; playing = null; return; }
+      if (playing) { playing.classList.remove("on"); playing.textContent = "▶"; }
+      audio.src = `site/clips/${p.slug}.mp3`; audio.play(); b.classList.add("on"); b.textContent = "■"; playing = b;
+    };
+    list.appendChild(el);
+  });
+}
+audio.onended = () => { if (playing) { playing.classList.remove("on"); playing.textContent = "▶"; playing = null; } };
+FAMILIES.forEach(f => {
+  const n = f === "All" ? PRESETS.length : PRESETS.filter(p => f === "New" ? p.new : p.family === f).length;
+  const b = document.createElement("button");
+  b.textContent = `${f} (${n})`;
+  if (f === current) b.className = "on";
+  b.onclick = () => { current = f; [...filters.children].forEach(x => x.classList.toggle("on", x === b)); render(); };
+  filters.appendChild(b);
+});
+render();
+</script>
+</body>
+</html>
