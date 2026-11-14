@@ -7,5 +7,6 @@
   "image": "docs/card.png",
   "color": "#FF8E24",
   "sounds": "Generated from circuit simulation",
-  "play": "https://joakimeriksson.github.io/fm1-emu/?fw=clavioline"
+  "play": "https://joakimeriksson.github.io/fm1-emu/?fw=clavioline",
+  "cheat": "https://mammothcheese.github.io/clavioline/"
 }
