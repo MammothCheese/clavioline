@@ -173,6 +173,7 @@ kbd { font: 700 12px var(--mono); background: var(--ivory); color: var(--ink); b
 .timeline li::before { content: ""; position: absolute; left: -7px; top: 7px; width: 12px; height: 12px; border-radius: 50%; background: var(--orange); box-shadow: 0 0 0 3px var(--navy); }
 .timeline b { font-family: var(--mono); color: var(--mint); margin-right: 8px; }
 #dev .btn, #dev .key { color: var(--ink); }
+.behind { display: block; width: 100%; max-width: 840px; height: auto; margin: 6px 0 20px; border-radius: 10px; border: 1px solid var(--panel); }
 </style>
 </head>
 <body>
@@ -247,6 +248,7 @@ kbd { font: 700 12px var(--mono); background: var(--ivory); color: var(--ink); b
 
 <section id="behindthesound">
   <h2>Behind the sound</h2>
+  <img class="behind" src="site/behind-the-sound.webp" width="840" height="280" loading="lazy" alt="Line drawing of the Clavioline beside its tone-forming network: tablets switch in and the signal runs through the coils and capacitors">
   <p class="sub"><b>Rebuilt from the blueprints.</b> This recreation began with a 1952 technical article, factory drawings and the inventor's patent. The circuits were traced component by component to reconstruct the Clavioline's unusual tone-forming network.</p>
   <p class="sub"><b>8,192 ways to shape a sound.</b> The 13 tone tablets work together, not independently. An early version simulated the entire circuit in real time, but overwhelmed the FM-1's processor. Now all 8,192 combinations are calculated in advance and packed into compact digital filters.</p>
   <p class="sub"><b>Tested against the real thing.</b> Recordings of a surviving Clavioline helped refine the sound. Some details remain educated estimates: the original drawings never specified the coils' values.</p>
