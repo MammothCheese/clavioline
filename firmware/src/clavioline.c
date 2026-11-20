@@ -1041,3 +1041,8 @@ static void app_main(void)
         }
     }
 }
+
+#ifdef DINGHY_WEB
+/* (the play page: which preset is showing, so a preset card can turn SELECT to its own) */
+EMSCRIPTEN_KEEPALIVE uint32_t web_preset(void) { return set.preset; }
+#endif

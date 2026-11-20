@@ -44,7 +44,9 @@ enum { ENC_SELECT = 0, ENC_ALGORITHM = 1, ENC_KNOB1 = 2, ENC_KNOB2 = 3, ENC_KNOB
 #define KEY_LED(k) (14u + (k))
 #endif
 
-#ifdef DINGHY_HOST
+#if defined(DINGHY_HOST) && defined(DINGHY_WEB)
+#include "../../emu/web.c"                     /* in a web browser: a fake FM-1 (emu/web.c) */
+#elif defined(DINGHY_HOST)
 #include "../../tests/host.c"                  /* on a computer: a fake FM-1 (tests/host.c) */
 #else
 #include <stdint.h>

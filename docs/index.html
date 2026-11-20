@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Clavioline firmware for the M-VAVE FM-1 – the Telstar sound, 43 presets</title>
+<title>The Clavioline, 1947 – play it in your browser | firmware for the M-VAVE FM-1</title>
 <meta name="description" content="Free firmware turning the M-VAVE FM-1 into the Selmer Clavioline behind Telstar: 13 tone tablets, vibrato, sub-octaves, knee lever and 43 presets.">
 <link rel="canonical" href="https://mammothcheese.github.io/clavioline/">
 <meta property="og:type" content="website">
@@ -109,24 +109,97 @@ table.tabs td:last-child { color: var(--chrome); }
 footer { color: var(--faint); font-size: 13px; padding: 30px 0 50px; border-top: 1px solid var(--panel); }
 footer a { color: var(--chrome); }
 @media (max-width: 760px) { .hero, .stops { grid-template-columns: 1fr; } nav ul { display: none; } .hero { padding-top: 30px; } }
+/* ---- the FM-1, in the case's own units (972 x 596), scaled to the box's width by emu.js */
+.fm1 { position: relative; width: 100%; max-width: 860px; margin: 0 auto; user-select: none; -webkit-user-select: none; touch-action: none; }
+#dev { position: absolute; left: 0; top: 0; width: 972px; height: 596px; transform-origin: 0 0; border-radius: 38px;
+  background: linear-gradient(180deg, #1d3a57, #12283E); border: 1.5px solid #2c4b6a; box-shadow: 0 1px 0 rgba(255,255,255,.08) inset, 0 20px 50px rgba(0,0,0,.55); }
+#dev > * { position: absolute; }
+.lab { text-align: center; font: 700 12.5px var(--mono); letter-spacing: 1px; color: var(--chrome); }
+.knob { border-radius: 50%; background: radial-gradient(circle at 40% 35%, #dfe6ee, #8a99a8 70%); box-shadow: 0 3px 6px rgba(0,0,0,.45), 0 0 0 4px #0d1d33;
+  cursor: ns-resize; touch-action: none; }
+.knob::after { content: ""; position: absolute; left: 50%; top: 5px; width: 3px; height: 11px; margin-left: -1.5px; border-radius: 2px;
+  background: var(--orange); transform-origin: 50% 15px; transform: rotate(var(--a, 0deg)); }
+.bezel { background: #050a18; border-radius: 9px; box-shadow: 0 0 0 3px #2c4b6a; }
+#screen { position: absolute; z-index: 2; border-radius: 2px; background: #000; pointer-events: none; }
+.plate { background: #0d1d33; border: 1px solid #22405e; }
+#dev .btn { border: 1px solid #c9bfa3; border-bottom-width: 3px; border-radius: 10px; background: var(--ivory); color: var(--ink); font: 700 12px var(--mono);
+  letter-spacing: .3px; cursor: pointer; padding: 0; touch-action: none; line-height: 1.1; }
+#dev .btn u { display: block; text-decoration: none; border-bottom: 1px solid var(--ink); margin: 0 6px 1px; padding-bottom: 1px; }
+#dev .btn.down { border-bottom-width: 1px; transform: translateY(2px); background: #ddd3b8; }
+#dev .btn.latch { outline: 2px solid var(--orange); outline-offset: 1px; }
+#dev .btn i { position: absolute; top: 4px; right: 5px; width: 6px; height: 6px; border-radius: 50%; background: #b9b09a; }
+#dev .btn.lit i { background: var(--orange); box-shadow: 0 0 6px var(--orange); }
+.key { border-radius: 21px; cursor: pointer; touch-action: none; }
+.key.w { background: var(--ivory); border: 1px solid #b8ae94; box-shadow: 0 3px 0 #9e957d; }
+.key.b { background: #1C1816; box-shadow: 0 3px 0 #000; }
+.key::before { content: ""; position: absolute; left: 50%; top: 18px; width: 4px; height: 24px; margin-left: -2px; border-radius: 2px; background: #3A3A40; }
+.key.b::before { background: #6a6f78; }
+.key.w::before { top: 22px; height: 38px; background: #cfc5aa; }
+.key.down { transform: translateY(2px); box-shadow: none; }
+.key.w.down { background: #f2d9b4; } .key.b.down { background: #5A4A36; }
+.key.lit::before { background: var(--orange); box-shadow: 0 0 6px var(--orange); }
+.key span { position: absolute; left: 0; right: 0; bottom: 8px; text-align: center; font: 700 12px var(--mono); color: #8d846d; }
+.key.b span { color: #9aa0a8; }
+.keybed { pointer-events: none; background: #0a1628 !important; }
+.power { position: absolute; inset: 0; border-radius: 30px; background: rgba(8, 16, 38, .72); display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 10px; z-index: 5; backdrop-filter: blur(2px); }
+.power button { font: 600 20px Orbitron, sans-serif; letter-spacing: 2px; padding: 14px 34px; border: 0; border-radius: 12px; background: var(--orange); color: var(--navy); cursor: pointer;
+  box-shadow: 0 6px 22px rgba(255, 142, 36, .35); }
+.power p { margin: 0; color: var(--chrome); font-size: 14px; }
+.bar { display: flex; gap: 18px; align-items: center; justify-content: center; flex-wrap: wrap; margin: 12px 2px 0; font-size: 13.5px; color: var(--chrome); }
+.bar button { border: 1px solid var(--faint); background: var(--panel); color: var(--ivory); border-radius: 8px; padding: 6px 12px; font: 13px var(--sans); cursor: pointer; }
+.help { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; margin-top: 16px; }
+.help div { background: var(--panel); border-radius: 10px; padding: 10px 14px; font-size: 13.5px; }
+.help h3 { margin: 0 0 6px; font: 500 15px var(--mono); color: var(--orange); letter-spacing: 1px; }
+.help p { margin: 4px 0; }
+kbd { font: 700 12px var(--mono); background: var(--ivory); color: var(--ink); border-radius: 4px; padding: 0 5px; white-space: nowrap; border-bottom: 2px solid #9e957d; }
+
+
+/* ---- combined page */
+.hero1 { padding: 40px 0 10px; text-align: center; }
+.hero1 .lede { margin: 0 auto 18px; }
+.hero1 .btns { margin-bottom: 22px; }
+.onpage { display: inline-block; margin-top: 8px; font-size: 12.5px; color: var(--chrome); }
+.onpage kbd { margin: 0 1px; }
+.preset .acts { display: flex; gap: 6px; flex: none; }
+.load { border: 1px solid var(--teal); background: none; color: var(--teal); border-radius: 16px; padding: 0 10px; height: 34px; font: 12px var(--mono); cursor: pointer; }
+.load:hover { background: var(--teal); color: var(--navy); }
+.load.done { background: var(--teal); color: var(--navy); }
+.toast { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); background: var(--panel); border: 1px solid var(--teal); color: var(--ivory);
+  padding: 9px 16px; border-radius: 10px; font-size: 14px; opacity: 0; transition: opacity .25s; pointer-events: none; z-index: 20; }
+.toast.on { opacity: 1; }
+.timeline { list-style: none; padding: 0; margin: 14px 0 0; border-left: 2px solid var(--faint); max-width: 760px; }
+.timeline li { position: relative; padding: 0 0 12px 20px; color: var(--chrome); }
+.timeline li::before { content: ""; position: absolute; left: -7px; top: 7px; width: 12px; height: 12px; border-radius: 50%; background: var(--orange); box-shadow: 0 0 0 3px var(--navy); }
+.timeline b { font-family: var(--mono); color: var(--mint); margin-right: 8px; }
+#dev .btn, #dev .key { color: var(--ink); }
 </style>
 </head>
 <body>
 <nav><div class="wrap"><a class="brand" href="#top">CLAVIOLINE</a>
-<ul><li><a href="#controls">Controls</a></li><li><a href="#stops">Stops</a></li><li><a href="#presets">Presets</a></li><li><a href="#behindthesound">Behind the sound</a></li><li><a href="https://github.com/MammothCheese/clavioline">GitHub</a></li></ul></div></nav>
+<ul><li><a href="#play">Play</a></li><li><a href="#controls">Controls</a></li><li><a href="#stops">Stops</a></li><li><a href="#presets">Presets</a></li><li><a href="#behindthesound">Behind the sound</a></li><li><a href="https://github.com/MammothCheese/clavioline">GitHub</a></li></ul></div></nav>
 
 <main class="wrap" id="top">
-<div class="hero">
-  <div>
-    <div class="kicker">CUSTOM FIRMWARE FOR THE M-VAVE FM-1 · FREE AND OPEN SOURCE</div>
-    <h1>The early synthesizer behind the Space Age sounds of <em>"Telstar"</em>, in your pocket.</h1>
-    <p class="lede">Turns the FM-1 into the Clavioline, a pioneering synthesizer designed in 1947. Recreated from original circuit diagrams, with components traced individually to reproduce its distinctive tone-forming network. Thirteen tone tablets interact through a simulated coil network, while percussive attack, three-speed vibrato and sub-octaves further shape the sound.</p>
-    <a class="btn primary" href="https://joakimeriksson.github.io/fm1-emu/?fw=clavioline">Play in browser</a>
-    <a class="btn ghost" href="https://github.com/MammothCheese/clavioline/releases/latest">Download</a>
+<section class="hero1" id="play" style="border-top:0">
+  <div class="kicker">CUSTOM FIRMWARE FOR THE M-VAVE FM-1 · FREE AND OPEN SOURCE</div>
+  <h1>The <em>Clavioline</em>, 1947</h1>
+  <p class="lede">Turns the FM-1 into the Clavioline, a pioneering synthesizer behind the Space Age sounds of "Telstar". Recreated from original circuit diagrams, with components traced individually to reproduce its distinctive tone-forming network. Thirteen tone tablets interact through a simulated coil network, while percussive attack, three-speed vibrato and sub-octaves further shape the sound.</p>
+  <div class="btns">
+    <a class="btn primary" href="https://github.com/MammothCheese/clavioline/releases/latest">Download</a>
     <a class="btn ghost" href="https://thefirmwarehub.com/firmware/clavioline/">Install with the Firmware Hub</a>
   </div>
-  <div class="screen"><img src="site/play.png" alt="The Clavioline screen on the FM-1: the tablets, the preset, the note in orbit and the knee lever"></div>
-</div>
+  <div class="fm1" id="fm1">
+    <div id="dev"></div>
+    <canvas id="screen" width="240" height="240"></canvas>
+    <div class="power" id="power"><button id="on">POWER ON</button><p>The real firmware, running in your browser. Sound starts when you press it.</p></div>
+  </div>
+  <div class="bar">
+    <span>Play with the mouse, your computer's keys (<kbd>Z</kbd>–<kbd>/</kbd> white, <kbd>A</kbd>–<kbd>'</kbd> black) or</span>
+    <button id="midi">Connect a MIDI keyboard</button>
+    <span id="midist"></span>
+    <button id="wipe" title="Forget the user slots and settings kept in this browser">Clear saved data</button>
+  </div>
+</section>
 
 <section id="controls">
   <h2>Controls</h2>
@@ -167,7 +240,7 @@ footer a { color: var(--chrome); }
 
 <section id="presets">
   <h2>Preset sounds</h2>
-  <p class="sub">Voicings come from a 1952 <i>Electronic Engineering</i> table and Selmer's instrument cards (and three brand new sounds).</p>
+  <p class="sub">Voicings come from a 1952 <i>Electronic Engineering</i> table and Selmer's instrument cards (and three brand new sounds). Press ▶ for a recording, or <b>Load</b> to put it on the device above and play it yourself.</p>
   <div class="filters" id="filters"></div>
   <div class="grid" id="list"></div>
 </section>
@@ -179,7 +252,6 @@ footer a { color: var(--chrome); }
   <p class="sub"><b>Tested against the real thing.</b> Recordings of a surviving Clavioline helped refine the sound. Some details remain educated estimates: the original drawings never specified the coils' values.</p>
   <p class="sub">Not a collection of sampled sounds, but an attempt to bring a 1947 electronic instrument back to life.</p>
 </section>
-  
 </main>
 
 <footer><div class="wrap">
@@ -187,19 +259,39 @@ Built from G. H. Hillier, "The Clavioline", <i>Electronic Engineering</i>, Octob
 "Clavioline" was a name used by Constant Martin and Selmer. "M-VAVE" and "FM-1" belong to their owners. Not made or endorsed by any of them.
 </div></footer>
 
+<div class="toast" id="toast"></div>
 <script src="site/presets.js"></script>
+<script src="play/clavioline.js"></script>
+<script src="play/emu.js"></script>
 <script>
+const toastEl = document.getElementById("toast");
+let toastT = 0;
+function toast(t) { toastEl.textContent = t; toastEl.classList.add("on"); clearTimeout(toastT); toastT = setTimeout(() => toastEl.classList.remove("on"), 2200); }
+function loadPreset(p, btn) {
+  const i = PRESETS.indexOf(p);
+  if (!window.clavEmu || !clavEmu.started) {
+    document.getElementById("play").scrollIntoView({ behavior: "smooth" });
+    toast("Press POWER ON first, then Load " + p.name);
+    return;
+  }
+  if (!audio.paused) { audio.pause(); if (playing) { playing.classList.remove("on"); playing.textContent = "▶"; playing = null; } }
+  clavEmu.selectPreset(i);
+  document.querySelectorAll(".load.done").forEach((b) => { b.classList.remove("done"); b.textContent = "Load"; });
+  btn.classList.add("done"); btn.textContent = "Loaded";
+  toast(p.name + " is on the device: play it with the keys");
+}
+
 const CLASS = c => ["III", "II", "I", "+"].includes(c) ? "vib" : c.startsWith("I") && c.length > 1 && /[pf]$/.test(c) ? "sub" : c === "P" ? "p" : "";
 const FAMILIES = ["All", "Reeds and winds", "Brass", "Strings", "Plucked", "Organs", "Other"];
 const list = document.getElementById("list"), filters = document.getElementById("filters");
 const audio = new Audio();
-let playing = null, current = "Other";
+let playing = null, current = "All";
 function render() {
   list.innerHTML = "";
   PRESETS.filter(p => current === "All" || (current === "New" ? p.new : p.family === current)).forEach(p => {
     const el = document.createElement("div");
     el.className = "preset";
-    el.innerHTML = `<div class="top"><b>${p.name}</b><button class="play" aria-label="Play ${p.name}">▶</button></div>
+    el.innerHTML = `<div class="top"><b>${p.name}</b><span class="acts"><button class="load" aria-label="Load ${p.name} on the device">Load</button><button class="play" aria-label="Play ${p.name}">▶</button></span></div>
       <div>${p.chips.map(c => `<span class="chip ${CLASS(c)}">${c}</span>`).join("")}</div>
       <div class="meta">${p.coupler} · <span class="${p.new ? "new" : ""}">${p.source}</span>${p.key === "CLAVIOLINE TONE" ? " · power-on" : ""}</div>`;
     const b = el.querySelector(".play");
@@ -208,6 +300,7 @@ function render() {
       if (playing) { playing.classList.remove("on"); playing.textContent = "▶"; }
       audio.src = `site/clips/${p.slug}.mp3`; audio.play(); b.classList.add("on"); b.textContent = "■"; playing = b;
     };
+    el.querySelector(".load").onclick = (ev) => loadPreset(p, ev.currentTarget);
     list.appendChild(el);
   });
 }
@@ -221,6 +314,7 @@ FAMILIES.forEach(f => {
   filters.appendChild(b);
 });
 render();
+
 </script>
 </body>
 </html>
